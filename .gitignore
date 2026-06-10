@@ -1,0 +1,41 @@
+# System files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor / IDE local settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Log files
+*.log
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local dependencies and caches
+node_modules/
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+
+# Lua compiled artifacts
+*.luac
+
+# Archive/package artifacts
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
