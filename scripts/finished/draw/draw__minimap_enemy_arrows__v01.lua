@@ -3,6 +3,7 @@
 -- 使用 draw.rect、draw.triangle、draw.line 在每个 frame_update 中绘制方形区域与缺口箭头。
 -- 默认按 2560x1440 下 64,64 到 388,388 的游戏内小地图区域校准。
 -- 小地图坐标固定按地图世界方位换算，不会随本地玩家视角旋转。
+-- 敌方箭头固定为 3 像素大小，并按敌方面朝方向旋转。
 
 local tab = gui.tab("MinimapRadar")
 local g_main = tab:group("main", "小地图敌方箭头", 0, 0, 420, 0)
@@ -30,16 +31,7 @@ local BORDER_COLOR = draw.u8(255, 255, 255, 170)
 local GRID_COLOR = draw.u8(255, 255, 255, 34)
 local LOCAL_COLOR = draw.u8(255, 255, 255, 230)
 
-local TEAM_PALETTE = {
-    draw.u8(255, 86, 86, 235),
-    draw.u8(86, 190, 255, 235),
-    draw.u8(255, 205, 74, 235),
-    draw.u8(175, 105, 255, 235),
-    draw.u8(70, 230, 155, 235),
-    draw.u8(255, 124, 210, 235),
-    draw.u8(255, 150, 66, 235),
-    draw.u8(120, 235, 235, 235),
-}
+local TEAM_COLOR_CACHE = {}
 
 local function clamp(v, lo, hi)
     if v < lo then return lo end
@@ -53,8 +45,20 @@ end
 
 local function team_color(team_num)
     local team = team_num or 0
-    local idx = (team % #TEAM_PALETTE) + 1
-    return TEAM_PALETTE[idx]
+    local cached = TEAM_COLOR_CACHE[team]
+    if cached then return cached end
+
+    -- 用队伍号生成稳定颜色，避免固定色盘在多队伍场景下循环撞色。
+    local seed = (team * 1103515245 + 12345) % 2147483648
+    local r = 70 + (seed % 170)
+    seed = (seed * 1103515245 + 12345) % 2147483648
+    local g = 70 + (seed % 170)
+    seed = (seed * 1103515245 + 12345) % 2147483648
+    local b = 70 + (seed % 170)
+
+    cached = draw.u8(r, g, b, 235)
+    TEAM_COLOR_CACHE[team] = cached
+    return cached
 end
 
 local function scaled_rect()
@@ -149,7 +153,7 @@ event.on("frame_update", function(e)
 
     local radius_m = s_radius:get() or 200
     if radius_m < 1 then radius_m = 1 end
-    local arrow_size = 10.0 * scale
+    local arrow_size = 3.0
 
     for _, enemy in pairs(game.entities.players) do
         if enemy and (not enemy.is_teammate) and (not enemy.is_dead) and enemy.origin then
