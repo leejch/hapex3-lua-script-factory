@@ -2,8 +2,7 @@
 -- 使用 game.localplayer 与 game.entities.players 读取本地和敌方位置、朝向、队伍。
 -- 使用 draw.rect、draw.triangle、draw.line 在每个 frame_update 中绘制方形区域与缺口箭头。
 -- 默认按 2560x1440 下 64,64 到 388,388 的游戏内小地图区域校准。
--- 小地图坐标固定按地图世界方位换算，不会随本地玩家视角旋转。
--- 敌方箭头固定为 3 像素大小，并按敌方面朝方向旋转。
+-- 小地图坐标不随本地视角旋转，敌方箭头宽 1.5 像素、长 3 像素并使用 enemy.yaw 旋转。
 
 local tab = gui.tab("MinimapRadar")
 local g_main = tab:group("main", "小地图敌方箭头", 0, 0, 420, 0)
@@ -86,45 +85,47 @@ local function world_to_minimap(delta, cx, cy, half, radius_m)
     return px, py
 end
 
-local function draw_open_arrow(cx, cy, yaw_deg, color, size, cut_color)
+local function atan2_deg(y, x)
+    if x > 0.0 then return math.atan(y / x) / 0.017453292519943295 end
+    if x < 0.0 and y >= 0.0 then return (math.atan(y / x) / 0.017453292519943295) + 180.0 end
+    if x < 0.0 and y < 0.0 then return (math.atan(y / x) / 0.017453292519943295) - 180.0 end
+    if y > 0.0 then return 90.0 end
+    if y < 0.0 then return -90.0 end
+    return 0.0
+end
+
+local function player_facing_yaw(player)
+    if player.yaw ~= nil then return player.yaw end
+
+    local v = player.abs_velocity
+    if v and v:length_2d() > 1.0 then
+        -- yaw 是敌人视角朝向；缺失时只用移动方向兜底，避免箭头完全固定不动。
+        return atan2_deg(v.y, v.x)
+    end
+
+    return 0.0
+end
+
+local function draw_open_arrow(cx, cy, yaw_deg, color, length, width)
     local a = deg_to_rad(yaw_deg or 0.0)
     local fx = math.cos(a)
     local fy = -math.sin(a)
     local rx = -fy
     local ry = fx
 
-    local tip_x = cx + fx * size
-    local tip_y = cy + fy * size
-    local base_x = cx - fx * size * 0.72
-    local base_y = cy - fy * size * 0.72
-    local wing = size * 0.68
+    local half_len = length * 0.5
+    local half_width = width * 0.5
+    local tip_x = cx + fx * half_len
+    local tip_y = cy + fy * half_len
+    local base_x = cx - fx * half_len
+    local base_y = cy - fy * half_len
+    local l_x = base_x - rx * half_width
+    local l_y = base_y - ry * half_width
+    local r_x = base_x + rx * half_width
+    local r_y = base_y + ry * half_width
 
-    local l_x = base_x - rx * wing
-    local l_y = base_y - ry * wing
-    local r_x = base_x + rx * wing
-    local r_y = base_y + ry * wing
-
-    draw.triangle(tip_x, tip_y, l_x, l_y, r_x, r_y, color, { filled = true })
-
-    -- 用内部小三角制造“缺口”，避免实心箭头在小地图上遮挡太多信息。
-    local inner = size * 0.48
-    local inner_tip_x = cx + fx * inner * 0.84
-    local inner_tip_y = cy + fy * inner * 0.84
-    local inner_base_x = cx - fx * inner * 0.52
-    local inner_base_y = cy - fy * inner * 0.52
-    local inner_wing = inner * 0.72
-    draw.triangle(
-        inner_tip_x,
-        inner_tip_y,
-        inner_base_x - rx * inner_wing,
-        inner_base_y - ry * inner_wing,
-        inner_base_x + rx * inner_wing,
-        inner_base_y + ry * inner_wing,
-        cut_color,
-        { filled = true }
-    )
-
-    draw.triangle(tip_x, tip_y, l_x, l_y, r_x, r_y, color, { filled = false, thickness = 1.5 })
+    -- 只画轮廓不填充，让 3px 小箭头保持中间缺口，同时仍能清楚体现朝向。
+    draw.triangle(tip_x, tip_y, l_x, l_y, r_x, r_y, color, { filled = false, thickness = 1.0 })
 end
 
 local function draw_minimap_frame(x1, y1, x2, y2, cx, cy, half)
@@ -153,7 +154,8 @@ event.on("frame_update", function(e)
 
     local radius_m = s_radius:get() or 200
     if radius_m < 1 then radius_m = 1 end
-    local arrow_size = 3.0
+    local arrow_length = 3.0
+    local arrow_width = 1.5
 
     for _, enemy in pairs(game.entities.players) do
         if enemy and (not enemy.is_teammate) and (not enemy.is_dead) and enemy.origin then
@@ -162,9 +164,9 @@ event.on("frame_update", function(e)
             if dist_m <= radius_m then
                 local px, py = world_to_minimap(delta, cx, cy, half, radius_m)
                 if px >= x1 and px <= x2 and py >= y1 and py <= y2 then
-                    local yaw = enemy.yaw or 0.0
+                    local yaw = player_facing_yaw(enemy)
                     local color = team_color(enemy.team_num)
-                    draw_open_arrow(px, py, yaw, color, arrow_size, bg)
+                    draw_open_arrow(px, py, yaw, color, arrow_length, arrow_width)
                 end
             end
         end
