@@ -1,6 +1,6 @@
 # Getting Started
 
-> Rebuilt from the [official HOOZi Getting Started page](https://docs.hoozi.cc/en/products/apex/dev/guide) and verified on 2026-07-18. The official documentation is authoritative if the two differ.
+> Rebuilt from the [official HOOZi Getting Started page](https://docs.hoozi.cc/en/products/apex/dev/guide) and verified against the official [`hapex-lua` MCP endpoint](https://docs.hoozi.cc/mcp) on 2026-07-18. The official documentation is authoritative if the two differ.
 
 Read this when you write your first script — from project layout to common pitfalls. Exact signatures and fields for all 17 modules are in [`api-reference.md`](api-reference.md).
 

@@ -128,7 +128,11 @@ Synchronous HTTP would block the menu thread. Always async with callback:
 
 ```lua
 net.http:get(url, function(resp)
-    if resp.ok then ... else log.warn(resp.error) end
+    if resp.ok then
+        log.info(resp.body)
+    else
+        log.warn(resp.error)
+    end
 end, 5)
 ```
 
@@ -136,7 +140,15 @@ end, 5)
 
 Prefer typed `game.*` fields. When using `mem` and `offsets`, resolve patterns and dynamic offsets once, cache them, and batch per-frame work with `mem.scatter` / `mem.write_scatter`. A successful `mem.is_valid` check only proves a pointer is in range; it does not prove the field is semantically correct. Treat every `mem.write_*` call as capable of corrupting state or crashing the game.
 
-## When to load references
+## Live documentation and local references
+
+Use the official `hapex-lua` MCP server at `https://docs.hoozi.cc/mcp` as the first source for current API facts when its tools are available:
+
+1. Call `list_modules` first to discover the current surface.
+2. Call `get_module_api` for the module being used, or `search_api` for a symbol whose module is unknown.
+3. Call `get_guide` for lifecycle/timing/pitfalls and `get_examples` for official full scripts.
+
+Use the local files below when MCP is unavailable, when offline work is required, or when the repository's locally adapted guidance is relevant. If MCP, local references, and the website conflict, the current MCP/official website is authoritative.
 
 When the user asks for specifics that go beyond these conventions, load the referenced file:
 
@@ -148,7 +160,7 @@ When the user asks for specifics that go beyond these conventions, load the refe
 
 Load on demand — each is large. For an API question like "what does `esp.add` accept?", load just `api-reference.md`. For "how do I write a damage logger?", load `examples.md`.
 
-The local references were rebuilt from [the official HOOZi 3.0 Lua documentation](https://docs.hoozi.cc/products/apex/dev/) on 2026-07-18. If they conflict with the official site, follow the official site.
+The local references were rebuilt from [the official HOOZi 3.0 Lua documentation](https://docs.hoozi.cc/products/apex/dev/) and re-verified through the official `hapex-lua` MCP server on 2026-07-18.
 
 ## Module summary
 

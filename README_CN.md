@@ -39,6 +39,19 @@ Codex 在生成、编辑或移动 Lua 脚本之前，应先读取 `AGENTS.md`。
 不要只根据 `README.md` 生成脚本。
 `README.md` 解释仓库工作流；`AGENTS.md` 定义编码行为。
 
+## 通过 MCP 使用 HOOZi 实时文档
+
+本仓库已经在项目级启用 HOOZi 官方文档 MCP：
+
+| 客户端 | 项目配置 |
+| ------ | -------- |
+| Codex 桌面端 / CLI / IDE 扩展 | `.codex/config.toml` |
+| Claude Code | `.mcp.json` |
+
+两份配置都将 `hapex-lua` 注册为 `https://docs.hoozi.cc/mcp` 上的 Streamable HTTP 服务器。克隆仓库后，无需再执行用户全局的 `codex mcp add` 或 `claude mcp add` 命令。出现提示时信任本项目，然后重启客户端或开启新会话，使其加载项目级服务器。
+
+查询最新 API 事实时，agent 应先调用 `list_modules`，再按需使用 `get_module_api`、`search_api`、`get_guide` 或 `get_examples`。`references/` 仍作为可离线查阅、可审查的快照，并包含少量仓库专用增强说明。
+
 ## 仓库核心用途
 
 本仓库用于支持一个重复执行的工作流：
@@ -157,7 +170,7 @@ references/
 
 这些文件应只在需要时读取。
 
-本参考包已根据 [HOOZi 3.0 Lua 官方开发文档](https://docs.hoozi.cc/products/apex/dev/) 重新构建，并于 2026-07-18 完成核验。`api-reference.md` 汇总了全局运行时、9 个核心模块和 8 个工具模块；若本地文件与官网冲突，以官网为准。
+本参考包已根据 [HOOZi 3.0 Lua 官方开发文档](https://docs.hoozi.cc/products/apex/dev/) 重新构建，并于 2026-07-18 通过官方 [`hapex-lua` MCP 端点](https://docs.hoozi.cc/mcp) 重新核验。`api-reference.md` 汇总了全局运行时、9 个核心模块和 8 个工具模块；若本地文件与实时 MCP / 官网冲突，以后者为准。
 
 | 任务                      | 应读取                              |
 | ----------------------- | -------------------------------- |

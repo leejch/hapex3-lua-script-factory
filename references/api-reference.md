@@ -1,6 +1,6 @@
 # HApex3.0 Lua API Reference
 
-This is the consolidated reference for every user-facing HApex3.0 Lua module: 9 core modules, 8 utility modules, and the global runtime surface. It was rebuilt from the official HOOZi documentation and verified on 2026-07-18.
+This is the consolidated reference for every user-facing HApex3.0 Lua module: 9 core modules, 8 utility modules, and the global runtime surface. It was rebuilt from the official HOOZi documentation and verified against the official [`hapex-lua` MCP endpoint](https://docs.hoozi.cc/mcp) on 2026-07-18.
 
 > [HOOZi 3.0 Lua documentation](https://docs.hoozi.cc/products/apex/dev/) is authoritative. If this local reference and the official site disagree, follow the official site. The English locale is linked alongside the canonical Chinese pages because this repository's reference text is English.
 
@@ -1481,7 +1481,9 @@ Register a movement algorithm. `name` is appended to the aim / trigger **Movemen
 
 ##### `game.aimbot.set_predictor(fn)`
 
-Globally **override the prediction algorithm**. `fn(target)` returns a world aim point `Vec3`; the aim thread consumes it at 500Hz in place of native `solve`. Pass `nil` to clear (fall back to native). `target` fields: `index`, `shooter`, `head`, `origin`, `velocity` (Vec3), `distance`, `v0`, `gravity`.
+Globally **override the prediction algorithm**. `fn(target)` returns a world aim point `Vec3`; the aim thread consumes it at 500Hz in place of native `solve`. Pass `nil` to clear (fall back to native). `target` fields: `index`, `shooter`, `aim_point`, `head`, `origin`, `velocity` (Vec3), `distance`, `v0`, `gravity`.
+
+> **`aim_point` vs `head`**: `aim_point` is the current actual aim point — in upper-body / full-body modes it rides the body part nearest the crosshair and moves with it, so compute the lead against it. `head` is the stable real head-bone world point, only for head-specific logic (e.g. fixed head-aim compensation). Always lead with `aim_point`, not `head` (otherwise the aim point gets pulled back to the head and cancels the tracking).
 
 > Same as `register_algorithm` — **load-body-only**. Also one-predictor-per-process: if another script already owns the predictor, calls are rejected silently to Lua (throttled log only). Convention: one predictor per process, or unload the holding script first.
 
@@ -1500,12 +1502,12 @@ end)
 
 -- Prediction override: reuse native solve for flight time, extrapolate by velocity
 game.aimbot.set_predictor(function(t)
-    if not lead:get() then return t.head end
-    local sol = game.aimbot.solve(t.shooter, t.head, t.velocity, t.v0, t.gravity)
-    if not sol then return t.head end
-    return Vec3(t.head.x + t.velocity.x * sol.time,
-                t.head.y + t.velocity.y * sol.time,
-                t.head.z + t.velocity.z * sol.time)
+    if not lead:get() then return t.aim_point end
+    local sol = game.aimbot.solve(t.shooter, t.aim_point, t.velocity, t.v0, t.gravity)
+    if not sol then return t.aim_point end
+    return Vec3(t.aim_point.x + t.velocity.x * sol.time,
+                t.aim_point.y + t.velocity.y * sol.time,
+                t.aim_point.z + t.velocity.z * sol.time)
 end)
 ```
 
