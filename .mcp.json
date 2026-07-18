@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "hapex-lua": {
+      "type": "http",
+      "url": "https://docs.hoozi.cc/mcp"
+    }
+  }
+}

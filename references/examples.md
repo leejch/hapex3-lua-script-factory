@@ -1,14 +1,16 @@
 # Example scripts
 
+> Rebuilt from the [official HOOZi Example scripts page](https://docs.hoozi.cc/en/products/apex/dev/examples) and verified against the official [`hapex-lua` MCP endpoint](https://docs.hoozi.cc/mcp) on 2026-07-18. The official documentation is authoritative if the two differ.
+
 Eight scripts ship with the product; full source lives in the `scripts/` directory next to the application. Each script's top 5 comment lines document its dependencies and load behavior.
 
----
+------------------------------------------------------------------------
 
 ## keybind_hint_pack
 
 Attaches dynamic text and color hints to keybind controls. Demonstrates the three return shapes of `input.format`: plain string, `{text, color}` table, and threshold-based dynamic colors.
 
-```lua
+``` lua
 local tab    = gui.tab("KbHints")
 local g_pack = tab:group("g", "三种 formatter 返值演示", 0, 0, 300, 0)
 
@@ -16,7 +18,7 @@ g_pack:keybind_control("alarm",     "警报开关"):set_hint("返字符串：状
 g_pack:keybind_control("stopwatch", "秒表"):set_hint("返 {text, color}：纯色")
 g_pack:keybind_control("counter",   "计数器"):set_hint("返 {text, color}：按值变色")
 
--- Returns a plain string
+-- 返回纯字符串
 local alarm_armed = false
 g_pack:button("toggle_alarm", "切换警报状态", function()
     alarm_armed = not alarm_armed
@@ -26,7 +28,7 @@ input.format("KbHints.g.alarm", function(id)
     return alarm_armed and "ARMED" or "OFF"
 end)
 
--- Returns a {text, color} table with a fixed color
+-- 返回固定颜色的 {text, color} 表
 local start_t = os.clock()
 input.format("KbHints.g.stopwatch", function(id)
     return {
@@ -35,7 +37,7 @@ input.format("KbHints.g.stopwatch", function(id)
     }
 end)
 
--- Returns a {text, color} table; color picked by threshold
+-- 返回 {text, color} 表，并按阈值选择颜色
 local counter = 0
 g_pack:button("tick", "计数 +1", function() counter = counter + 1 end)
 g_pack:button("reset", "计数清零", function()
@@ -52,15 +54,15 @@ end)
 log.success("keybind_hint_pack 注册完成")
 ```
 
-APIs used: `gui.tab`, `input.format`, `gui.notify`, `KeybindControl:set_hint`
+APIs used: [`gui.tab`](api-reference.md#gui), [`input.format`](api-reference.md#input), [`gui.notify`](api-reference.md#notifications-guinotify), [`KeybindControl:set_hint`](api-reference.md#gui)
 
----
+------------------------------------------------------------------------
 
 ## low_health_alert
 
 One-shot notification plus red ESP text when a teammate goes down or when you / a teammate are low on HP. Debounced to avoid spam from continuous triggers.
 
-```lua
+``` lua
 local tab    = gui.tab("LowHpAlert")
 local g_cfg  = tab:group("g_cfg", "提示阈值（百分比）", 0, 0, 0, 0)
 
@@ -69,7 +71,7 @@ local th_team_el  = g_cfg:slider("th_teammate", "队友血量低于", 1, 100, 25
 local th_enemy_el = g_cfg:slider("th_enemy",    "敌方残血标红", 1, 100, 50):set_format("%d%%")
 local notify_el   = g_cfg:checkbox("notify_on", "启用通知提示", true)
 
--- Debounce
+-- 防抖，避免同一状态持续刷屏
 local last_alert = {}
 local function should_fire(key)
     local t = os.clock()
@@ -133,15 +135,15 @@ end, {
 log.success("low_health_alert 已注册 3 个 ESP 文本元素")
 ```
 
-APIs used: `esp.add`, `game.entities.players`, `gui.notify`
+APIs used: [`esp.add`](api-reference.md#esp), [`game.entities.players`](api-reference.md#game), [`gui.notify`](api-reference.md#notifications-guinotify)
 
----
+------------------------------------------------------------------------
 
 ## tactical_theme
 
 One-click switch between ESP color schemes for different tactical scenarios (Default / HighContrast / Stealth). A single `el.colors = {c0,c1,c2,c3}` line writes all four scenario colors at once.
 
-```lua
+``` lua
 local THEMES = {
     {
         name   = "Default",
@@ -207,15 +209,15 @@ apply_theme(1)
 log.success("tactical_theme 已注册 3 个主题")
 ```
 
-APIs used: `esp.add`, `ESPElement.colors`, `Combobox:on_change`
+APIs used: [`esp.add`](api-reference.md#esp), [`ESPElement.colors`](api-reference.md#esp), [`Combobox:on_change`](api-reference.md#gui)
 
----
+------------------------------------------------------------------------
 
 ## perf_hud
 
 Floating window displaying FPS, frame time (avg / min / max), and loot count. `win:bind_visible(checkbox)` auto-syncs window visibility with the checkbox.
 
-```lua
+``` lua
 local tab     = gui.tab("PerfHud")
 local g_ctrl  = tab:group("g_ctrl", "性能 HUD 控制", 0, 0, 350, 0)
 local cb_show = g_ctrl:checkbox("show", "显示浮动窗口", false)
@@ -283,15 +285,15 @@ win:live_table("metrics",
 log.success("perf_hud 已加载")
 ```
 
-APIs used: `gui.window`, `Window:bind_visible`, `event.on frame_update`, `Window:live_table`
+APIs used: [`gui.window`](api-reference.md#gui), [`Window:bind_visible`](api-reference.md#gui), [`event.on frame_update`](api-reference.md#event), [`Window:live_table`](api-reference.md#gui)
 
----
+------------------------------------------------------------------------
 
 ## loadout_presets
 
 One-click switch between multiple config presets, with a floating window showing the active preset. Batch `gui.set` writes the controls; `gui.set_visible` toggles sub-tab visibility.
 
-```lua
+``` lua
 local tab    = gui.tab("Loadout")
 local g_demo = tab:group("g_demo", "演示控件（被预设修改）", 0, 0, 0, 0)
 
@@ -382,15 +384,15 @@ apply_preset("Holder 守点")
 log.success("loadout_presets 已加载 3 套预设")
 ```
 
-APIs used: `gui.sub_tab`, `gui.set` / `gui.get`, `gui.set_visible`, `Combobox:on_change`, `Window:set_open`
+APIs used: [`gui.sub_tab`](api-reference.md#gui), [`gui.set`](api-reference.md#gui) / [`gui.get`](api-reference.md#gui), [`gui.set_visible`](api-reference.md#gui), [`Combobox:on_change`](api-reference.md#gui), [`Window:set_open`](api-reference.md#gui)
 
----
+------------------------------------------------------------------------
 
 ## loot_inspector
 
 Live snapshot of current loot — name, distance, tier. Has a name filter.
 
-```lua
+``` lua
 local tab     = gui.tab("LootInspector")
 local cb_show = tab:checkbox("show", "显示窗口", false)
 local filter  = tab:input_text("filter", "名字过滤", "")
@@ -424,15 +426,15 @@ end)
 log.success("loot_inspector 已加载")
 ```
 
-APIs used: `game.entities.loots`, `Window:bind_visible`, `InputText:get`
+APIs used: [`game.entities.loots`](api-reference.md#game), [`Window:bind_visible`](api-reference.md#gui), [`InputText:get`](api-reference.md#gui)
 
----
+------------------------------------------------------------------------
 
 ## remote_config_push
 
 WebSocket receives `path=value` commands and hot-patches menu controls. An HTTP probe doubles as a connectivity test. All four callbacks (open / message / error / close) are wired up.
 
-```lua
+``` lua
 local state = {
     ws_id    = 0,
     last_msg = nil,
@@ -540,9 +542,9 @@ end, 80.0)
 log.success("remote_config_push 已加载，点 Connect 开始")
 ```
 
-APIs used: `net.ws`, `net.http:get`, `gui.find`, `gui.set`
+APIs used: [`net.ws`](api-reference.md#net), [`net.http:get`](api-reference.md#net), [`gui.find`](api-reference.md#gui), [`gui.set`](api-reference.md#gui)
 
----
+------------------------------------------------------------------------
 
 ## damage_logger
 
@@ -550,7 +552,7 @@ Damage logging to a local CSV plus HTTP POST archival. An ESP text callback is u
 
 One of the few scripts that must explicitly listen for `script_unloaded` — its internal buffer only persists if written to disk explicitly.
 
-```lua
+``` lua
 local prev             = {}
 local events_buf       = {}
 local total_logged     = 0
@@ -715,4 +717,4 @@ end)
 log.success("damage_logger 已加载")
 ```
 
-APIs used: `esp.add`, `event.on`, `file.read/write/exists`, `net.http:post`, `gui.find`
+APIs used: [`esp.add`](api-reference.md#esp), [`event.on`](api-reference.md#event), [`file.read/write/exists`](api-reference.md#file), [`net.http:post`](api-reference.md#net), [`gui.find`](api-reference.md#gui)

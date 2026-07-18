@@ -39,6 +39,19 @@ Codex should read `AGENTS.md` before generating, editing, or moving Lua scripts.
 Do not generate scripts from `README.md` alone.
 `README.md` explains the repository workflow; `AGENTS.md` defines coding behavior.
 
+## Live HOOZi documentation via MCP
+
+The official HOOZi documentation MCP is already enabled at the project level:
+
+| Client | Project configuration |
+| ------ | --------------------- |
+| Codex desktop / CLI / IDE extension | `.codex/config.toml` |
+| Claude Code | `.mcp.json` |
+
+Both configurations register `hapex-lua` as a Streamable HTTP server at `https://docs.hoozi.cc/mcp`. No user-global `codex mcp add` or `claude mcp add` command is required after cloning this repository. Trust the project when prompted, then restart the client or open a new session so it loads the project-scoped server.
+
+For current API facts, agents should call `list_modules` first, then use `get_module_api`, `search_api`, `get_guide`, or `get_examples` as appropriate. The files in `references/` remain the offline, reviewable snapshot and contain a small amount of repository-specific guidance.
+
 ## Core repository purpose
 
 This repository exists to support a repeated workflow:
@@ -156,6 +169,8 @@ references/
 ```
 
 These files should be loaded only when needed.
+
+The reference pack was rebuilt from the [official HOOZi 3.0 Lua documentation](https://docs.hoozi.cc/products/apex/dev/) and re-verified through the official [`hapex-lua` MCP endpoint](https://docs.hoozi.cc/mcp) on 2026-07-18. `api-reference.md` consolidates the global runtime surface, all 9 core modules, and all 8 utility modules. The current MCP/official site remains authoritative if it conflicts with a local file.
 
 | Task                                                                  | Read                                                |
 | --------------------------------------------------------------------- | --------------------------------------------------- |

@@ -1,34 +1,32 @@
 # Getting Started
 
-Read this when you write your first script — from project layout to common pitfalls. API signatures and return values are in the per-module sidebar.
+> Rebuilt from the [official HOOZi Getting Started page](https://docs.hoozi.cc/en/products/apex/dev/guide) and verified against the official [`hapex-lua` MCP endpoint](https://docs.hoozi.cc/mcp) on 2026-07-18. The official documentation is authoritative if the two differ.
 
----
+Read this when you write your first script — from project layout to common pitfalls. Exact signatures and fields for all 17 modules are in [`api-reference.md`](api-reference.md).
+
+------------------------------------------------------------------------
 
 ## Project layout
 
 Lua scripts live in a `scripts/` directory next to the application and are auto-discovered at startup:
 
-```
-<app directory>/
-├── <main executable>
-└── scripts/
-    ├── _test_*.lua         # leading underscore = sample, not auto-loaded
-    ├── keybind_hint_pack.lua
-    ├── low_health_alert.lua
-    └── ...
-```
+    <app directory>/
+    ├── <main executable>
+    └── scripts/
+        ├── _test_*.lua         # leading underscore = sample, not auto-loaded
+        ├── keybind_hint_pack.lua
+        ├── low_health_alert.lua
+        └── ...
 
 Scripts starting with an underscore are not auto-loaded; load them manually with `script.load("_test_xx.lua")` or via the menu. Regular scripts are auto-loaded based on the script list in your config.
 
 ### Load order
 
-```
-1. Config system loads      reads default plan + current plan
-2. Lua runtime inits        VM + bindings
-3. Static menu built        aimbot / visuals / misc etc. attached
-4. Startup scripts load     each entry in the config script list loaded sequentially
-5. Menu / background threads spin up
-```
+    1. Config system loads      reads default plan + current plan
+    2. Lua runtime inits        VM + bindings
+    3. Static menu built        aimbot / visuals / misc etc. attached
+    4. Startup scripts load     each entry in the config script list loaded sequentially
+    5. Menu / background threads spin up
 
 When your script runs, the static menu is already mounted in the GUI tree, so `gui.set("aimbot.master", true)` can write any existing path. Sub-trees you create via `gui.tab("X")` get appended to the end. Multi-script load order is unstable — don't reference other scripts' paths from yours.
 
@@ -38,13 +36,13 @@ Loading via the menu "Load Script" button follows the same flow as auto-load, bu
 
 Injected before each script executes:
 
-```lua
+``` lua
 print(_SCRIPT_PATH)  -- "scripts/damage_logger.lua"
 ```
 
 Used in `script_unloaded` events to detect whether *your* script is being unloaded:
 
-```lua
+``` lua
 event.on("script_unloaded", function(ue)
     if ue.script_path ~= _SCRIPT_PATH then return end
     -- handle only my own unload
@@ -58,7 +56,7 @@ end)
 ### `log.*` vs `gui.notify`
 
 | Purpose | Use | Visible where |
-|---|---|---|
+|----|----|----|
 | Developer diagnostics, debug info, error trace | `log.info/success/warn/error` | In-menu console |
 | User-facing message (action feedback, error alert) | `gui.notify:info/success/warn/error` | Floating toast, auto-dismisses in ~3-5s |
 
@@ -68,31 +66,33 @@ Rules of thumb:
 - User clicked a button to trigger something → `gui.notify:success("Preset applied ...", 2.5)`
 - Program error (cloud unreachable, file write failed) → both: `log.warn` for the trace, `gui.notify:error` so the user sees it
 
----
+------------------------------------------------------------------------
 
 ## Resource lifecycle
 
-The six resource types below are **automatically released** when a script is unloaded (menu close button, `script.unload`, or app shutdown). You don't need to write `event.on("script_unloaded", ...)` cleanup for these:
+The runtime tracks resources by the script that created them. The following are **automatically released** when that owner script is unloaded (menu close button, `script.unload`, or app shutdown), so do not add cleanup handlers for them:
 
-| Resource | API |
-|---|---|
-| Event subscription | `event.on("frame_update", fn)` |
-| ESP element | `esp.add("tag", fn, opts)` |
-| Menu container & control | `gui.tab(...)` / `tab:group(...)` etc. |
-| Keybind formatter | `input.format(path, fn)` |
-| HTTP / WebSocket | `net.http:get` / `net.ws:connect` |
-| Image texture | `file.image:load/svg/create` |
+| Resource | API / unload behavior |
+|----|----|
+| Event subscription | `event.on(...)`, including custom-event handlers |
+| Delayed callback | Pending `Delay(...)` callbacks are cancelled before they fire |
+| ESP element | `esp.add(...)` elements are removed |
+| Menu container and control | Objects created through `gui.*` are removed |
+| Keybind formatter | `input.format(...)` formatters are removed |
+| HTTP callback | Queued `net.http:*` responses are silently discarded |
+| WebSocket client and server | `net.ws:connect(...)` clients and `net.ws_server:listen(...)` servers are closed; server clients are disconnected |
+| Image texture | `file.image:load/svg/create/load_gif` textures are released |
 
 You only need to manually subscribe to the unload event when your script has **external side effects** to flush (write to disk, HTTP report):
 
-```lua
+``` lua
 event.on("script_unloaded", function(ue)
     if ue.script_path ~= _SCRIPT_PATH then return end
     flush_buffer_to_disk()
 end)
 ```
 
----
+------------------------------------------------------------------------
 
 ## Cross-script communication
 
@@ -100,7 +100,7 @@ end)
 
 `shared` is a plain Lua table shared across all scripts:
 
-```lua
+``` lua
 -- Script A
 shared.last_kill_time = os.clock()
 
@@ -120,7 +120,7 @@ Properties:
 
 ### Recommended: claim a namespace
 
-```lua
+``` lua
 shared.damage_logger = shared.damage_logger or {}
 shared.damage_logger.last_event_t = os.clock()
 shared.damage_logger.total = (shared.damage_logger.total or 0) + 1
@@ -128,16 +128,18 @@ shared.damage_logger.total = (shared.damage_logger.total or 0) + 1
 
 Reader side:
 
-```lua
+``` lua
 local d = shared.damage_logger
-if d and d.last_event_t then ... end
+if d and d.last_event_t then
+    handle_damage_logger_state(d)
+end
 ```
 
 ### Custom event bus
 
-For more structured communication, use `event.emit` / `event.on`:
+For more structured communication, use [`event.emit` / `event.on`](api-reference.md#custom-events-cross-script):
 
-```lua
+``` lua
 -- Script A
 event.on("hp_changed", function(name, hp, old) print(name, old, "→", hp) end)
 
@@ -157,7 +159,7 @@ Subscriptions are auto-revoked on script unload.
 
 `shared.*` or custom events are the proper path for inter-script communication.
 
----
+------------------------------------------------------------------------
 
 ## Time & cadence
 
@@ -167,25 +169,44 @@ Subscriptions are auto-revoked on script unload.
 
 Implications:
 
-- `draw.*` calls **must** go inside `frame_update`. The foreground draw list resets every frame; miss one frame and you get a blank flicker.
+- `draw.*` calls **must** go inside `frame_update` or `render_post`. The foreground draw list resets every frame; miss one frame and you get a blank flicker.
 - Heavy work (data scans, network I/O) cannot run every frame — throttle (see below)
 
 ### Time functions
 
 | Function | Meaning | Use for |
-|---|---|---|
-| `time.now()` | Wall clock seconds (alias of `os.clock()`) | Timers, throttling, anything "real seconds" |
+|----|----|----|
+| `time.now()` | Monotonic real-time seconds (equivalent to `os.clock()`) | Intervals, timers, throttling; not a Unix timestamp |
 | `time.delta()` | Last frame duration (seconds) | Speed integration (movement, animation lerp) |
-| `time.game()` | In-game time | Sync with in-game clock (pauses when game pauses) |
+| `time.game()` | Local-player in-game time | Local game-time logic; pauses when the game pauses |
+| `time.curtime()` | Server-authoritative game time, or `0` when unavailable | Ring countdowns, bullet time, and server tick synchronization |
 | `time.frame_count()` | Cumulative render frame count | Modulo scheduling `% N == 0` |
+| `utils.unix_time()` | Unix timestamp in seconds | Log timestamps and server wall-clock synchronization |
 
 You can also read `e.delta_time` from the `event.on("frame_update", fn)` callback — equivalent to `time.delta()`.
+
+### One-shot delayed callbacks
+
+`Delay(seconds, fn)` schedules `fn` on the render thread. It is useful for retries or deferred setup and is cancelled automatically if the owner script unloads first:
+
+``` lua
+local function retry(remaining)
+    if remaining <= 0 then return end
+    net.http:get("https://api.example.com/health", function(resp)
+        if not resp.ok then
+            Delay(1.0, function() retry(remaining - 1) end)
+        end
+    end, 5)
+end
+
+retry(3)
+```
 
 ### Accumulator throttle
 
 Doing heavy work every frame (player scan + slow DMA queries) will stutter. Standard template:
 
-```lua
+``` lua
 local accum = 0.0
 event.on("frame_update", function(e)
     accum = accum + e.delta_time
@@ -199,7 +220,7 @@ end)
 
 Simpler "every N frames":
 
-```lua
+``` lua
 event.on("frame_update", function(e)
     if time.frame_count() % 60 == 0 then
         do_periodic_thing()
@@ -209,7 +230,7 @@ end)
 
 ### Debounce: at most once per N seconds
 
-```lua
+``` lua
 local last_alert = {}
 
 local function should_fire(key)
@@ -223,14 +244,14 @@ end
 
 Good for suppressing repeated notifications when a player stays in a triggering state.
 
----
+------------------------------------------------------------------------
 
 ## Example scripts
 
-Full annotated source: Example Scripts. The eight scripts cover:
+Full annotated source: [Example Scripts](examples.md). The eight scripts cover:
 
 | Script | What it demonstrates |
-|---|---|
+|----|----|
 | `keybind_hint_pack.lua` | Three return shapes of `input.format` (string / table / threshold colorize) |
 | `low_health_alert.lua` | ESP text element + debounced notification + entity field access |
 | `tactical_theme.lua` | ESP scenario palette bulk switching + Combobox callback |
@@ -240,7 +261,7 @@ Full annotated source: Example Scripts. The eight scripts cover:
 | `remote_config_push.lua` | WebSocket four callbacks + remote push hot-edit |
 | `damage_logger.lua` | ESP polling + frame-pace flush + file + HTTP composite |
 
----
+------------------------------------------------------------------------
 
 ## Common pitfalls
 
@@ -257,7 +278,7 @@ To react to a menu hotkey the user pressed, bind a `KeybindControl` and use `inp
 
 The foreground draw list resets every frame:
 
-```lua
+``` lua
 -- Wrong: called at script top, drawn once and gone
 draw.text(10, 10, draw.rgba(1,1,1,1), "Hello")
 
@@ -272,7 +293,7 @@ Missing a frame = a blank flicker that frame.
 ### Colon `:` vs dot `.` calling rules
 
 | Syntax | Use case |
-|---|---|
+|----|----|
 | `obj:method(args)` | Stateful object methods: `gui.find(p):set(v)` / `tab:group(...)` / `net.http:get(...)` / `net.ws:connect(...)` / `file.image:load(...)` |
 | `obj.field` | Read-only data field: `player.health` / `event.delta_time` / `game.localplayer.weapon` |
 | `module.func(args)` | Module function: `gui.set(p, v)` / `esp.add(...)` / `log.info(...)` / `time.now()` |
@@ -283,9 +304,9 @@ Mixing them produces a `bad self argument` error. Module functions always use do
 
 ### Weapon config paths
 
-Weapon configuration flows through the same `gui.set/get` path syntax: `aimbot.weapon.<id>.<sub>`. For the currently held weapon, get the prefix from `gui.get_active_override_path()`. See `gui` weapon configuration.
+Weapon configuration flows through the same `gui.set/get` path syntax: `aimbot.weapon.<id>.<sub>`. For the currently held weapon, get the prefix from `gui.get_active_override_path()`. See [`gui` weapon configuration](api-reference.md#weapon-configuration-readwrite).
 
-```lua
+``` lua
 gui.set("aimbot.weapon.r301.aim.fov_hip", 12.5)
 local p = gui.get_active_override_path()
 if p ~= "" then gui.set(p .. ".aim.bone_target", 2) end
@@ -295,7 +316,7 @@ Field names follow the C++ SCHEMA; an invalid path returns nil / silently no-ops
 
 ### Same-frame `set` then `get` is visible
 
-```lua
+``` lua
 gui.set("aimbot.master", true)
 local v = gui.get("aimbot.master")  -- returns true immediately, no need to wait
 ```
@@ -306,7 +327,7 @@ local v = gui.get("aimbot.master")  -- returns true immediately, no need to wait
 
 The API does not provide synchronous HTTP — it would block the menu thread and freeze the GUI during script load. Correct pattern:
 
-```lua
+``` lua
 net.http:get("https://example.com", function(resp)
     if resp.ok then
         -- handle resp.body
@@ -320,7 +341,7 @@ The callback runs on the menu thread; you can call `gui.set` / `gui.notify:*` di
 
 ### Combobox indices are 1-based
 
-```lua
+``` lua
 group:combobox("playstyle", "...", { "Default", "Holder", "Rusher", "Safe" }, 2)
 --                                                                          ^ default = "Holder"
 ```
@@ -331,7 +352,7 @@ The `on_change(fn)` callback signature is also `fn(idx_1based, name)`. Combobox 
 
 ### Iterate entity tables with `pairs`, not `#`
 
-```lua
+``` lua
 -- Wrong
 local n = #game.entities.loots
 
@@ -341,3 +362,12 @@ for _ in pairs(game.entities.loots) do n = n + 1 end
 ```
 
 `game.entities.{players, loots, projectiles}` are userdata-backed tables; `#` returns 0 or undefined. `pairs` works correctly.
+
+### Keep low-level memory work explicit and batched
+
+Prefer the typed fields in `game.*` whenever they expose what you need. When a field is not wrapped, combine an entity's `.base`, the named [`offsets`](api-reference.md#offsets) table, and [`mem`](api-reference.md#mem) deliberately:
+
+- Resolve `offsets.find(...)` and `mem.find_pattern(...)` once during initialization and cache the result; both are cold-path operations.
+- A single `mem.read_*` or `mem.write_*` is synchronous. Use `mem.scatter(...)` or `mem.write_scatter(...)` for multi-field work in a frame callback.
+- Validate bases and pointers with `mem.is_valid(...)`, but remember that it only performs a local range check and cannot prove the address has the intended semantic meaning.
+- Treat every `mem.write_*` call as dangerous. A wrong address or value can corrupt state or crash the game; named offsets reduce hardcoding but do not guarantee that every dumper entry is a real in-memory field offset.
