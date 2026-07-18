@@ -1,21 +1,15 @@
 ---
 name: hapex3-lua
-description: Use when writing or debugging Lua scripts for HApex3.0. Covers the 14-module Lua API (event, gui, esp, net, game, draw, math, file, input, log, script, time, config, json), calling conventions (colon vs dot, 1-based Combobox, no input.is_down on dual-machine setups), automatic resource cleanup on script unload, the 8 reference scripts shipped with the product, and the frame_update timing model. Apply this skill any time the user mentions writing/editing/debugging .lua scripts for HApex3.0 / HOOZi.
+description: Write, edit, review, or debug HApex3.0 / HOOZi Lua scripts with the complete 17-module API (event, gui, esp, net, game, draw, math, file, input, log, script, time, config, json, utils, mem, offsets), globals, lifecycle rules, and official examples. Use whenever a request concerns HApex3.0/HOOZi Lua files or any of these APIs, including low-level memory and offset access; do not use for generic HApex3.0 product questions unrelated to Lua scripting.
 ---
 
 # HApex3.0 Lua Scripting
 
-This skill assists writing and debugging Lua scripts for HApex3.0. Scripts live in `<app dir>/scripts/<name>.lua` and have access to a 14-module API surface (menu controls, ESP elements, networking, drawing, game state, etc.).
+This skill assists writing and debugging Lua scripts for HApex3.0. Scripts live in `<app dir>/scripts/<name>.lua` and have access to 17 user-facing modules plus the global runtime surface.
 
-## When to invoke
+## Scope
 
-User signals to apply this skill:
-- Any mention of writing / editing / debugging a `.lua` script for HApex3.0 or HOOZi
-- Questions about specific API: `gui.find`, `esp.add`, `net.http`, `draw.text`, `game.localplayer`, `event.on`, etc.
-- "How do I make an ESP element / watermark / toast / hotkey hint" type asks
-- Help porting old patterns to current API
-
-If the user just mentions HApex3.0 generally (not Lua), this skill does not apply.
+Use this pack for HApex3.0/HOOZi Lua work. Generic product questions that do not involve scripting are outside its scope.
 
 ## Core conventions
 
@@ -41,7 +35,7 @@ group:combobox("kind", "...", { "Default", "A", "B", "C" }, 2)  -- default = "A"
 
 ### `draw.*` MUST be called every render frame
 
-The foreground draw list resets each frame. Drawing once at script top is invisible. Always inside `event.on("frame_update", fn)`.
+The foreground draw list resets each frame. Drawing once at script top is invisible. Always draw inside `event.on("frame_update", fn)` or `event.on("render_post", fn)`.
 
 ```lua
 -- WRONG
@@ -56,6 +50,7 @@ end)
 ### No `input.is_down(vk)` on dual-machine setups
 
 HApex3.0 runs on a separate machine from the player. OS key APIs read the program-machine's keyboard, not the player's. Query player state via:
+
 - `game.localplayer.*` fields (`is_zooming`, `is_grenade`, `is_down`, ...) — read from game memory
 - `input.is_active(menu_path)` — check menu hotkey active state
 
@@ -75,12 +70,14 @@ for _ in pairs(game.entities.loots) do n = n + 1 end
 ### Resources are auto-cleaned on script unload
 
 Don't manually subscribe to `script_unloaded` for these — they release automatically:
+
 - `event.on` subscriptions
+- pending `Delay(...)` callbacks
 - `esp.add` elements
 - `gui.*` containers and controls
 - `input.format` formatters
-- `net.http` callbacks and `net.ws` connections
-- `file.image:load/svg/create` textures
+- `net.http` callbacks, `net.ws` connections, and `net.ws_server` listeners/clients
+- `file.image:load/svg/create/load_gif` textures
 
 Only handle `script_unloaded` when the script has external side effects to flush (writing buffer to disk, posting final HTTP).
 
@@ -105,6 +102,7 @@ aimbot.weapon.<weapon_id>.<sub_path>
 - `<sub_path>` follows the SCHEMA on the C++ side: `aim.fov_hip`, `aim.pid.kp`, `aim.max_dist_range[2]` (1-based arrays), `trigger_release`, `filter_tags[3]`, etc.
 
 For the currently held weapon, get the prefix from `gui.get_active_override_path()`. Return value matches the aim thread's actually-effective config:
+
 - Held weapon in armory (or its group is) → `"aimbot.weapon.<id>"`
 - Held weapon NOT in armory → `"aimbot.weapon.default"` (the fallback config that's actually driving aim)
 - Player not alive / state unavailable → `""`
@@ -118,6 +116,7 @@ end
 ```
 
 Field names follow C++ SCHEMA. Failure modes — all silently no-op (`gui.set`) / return nil (`gui.get`):
+
 - Weapon ID not in armory → **not** auto-created, **not** fallback to default
 - Unknown field name / OOB index / type mismatch
 
@@ -133,17 +132,23 @@ net.http:get(url, function(resp)
 end, 5)
 ```
 
+### Low-level memory access is synchronous and writes are dangerous
+
+Prefer typed `game.*` fields. When using `mem` and `offsets`, resolve patterns and dynamic offsets once, cache them, and batch per-frame work with `mem.scatter` / `mem.write_scatter`. A successful `mem.is_valid` check only proves a pointer is in range; it does not prove the field is semantically correct. Treat every `mem.write_*` call as capable of corrupting state or crashing the game.
+
 ## When to load references
 
 When the user asks for specifics that go beyond these conventions, load the referenced file:
 
 | User intent | Load |
 |---|---|
-| Parameter / return / field details for a specific module | `references/api-reference.md` (all 14 user-facing modules concatenated) |
+| Parameter / return / field details for a specific module | `references/api-reference.md` (global surface + all 17 user-facing modules) |
 | Complete working example for a use case | `references/examples.md` (8 fully-commented scripts) |
 | Project structure, lifecycle, cross-script communication, timing patterns | `references/guide.md` |
 
 Load on demand — each is large. For an API question like "what does `esp.add` accept?", load just `api-reference.md`. For "how do I write a damage logger?", load `examples.md`.
+
+The local references were rebuilt from [the official HOOZi 3.0 Lua documentation](https://docs.hoozi.cc/products/apex/dev/) on 2026-07-18. If they conflict with the official site, follow the official site.
 
 ## Module summary
 
@@ -152,19 +157,25 @@ Core 9:
   event   subscriptions + custom event bus
   gui     menu UI + config writes
   esp     ESP elements (text / bar / mixed / free)
-  net     HTTP + WebSocket (async only)
+  net     async HTTP + WebSocket client/server
   game    real-time read-only data
   draw    primitive drawing (line/rect/circle/triangle/quad/polyline/text/image)
   math    vectors + projection + easing curves
-  file    sandboxed file IO + image resources
-  input   hotkey state + formatter
+  file    sandboxed file IO + static/animated image resources
+  input   hotkey state + formatter + clipboard
 
-Utility 5:
+Utility 8:
   log     console diagnostics (info/success/warn/error)
   script  load / unload
-  time    now / delta / game / frame_count
+  time    now / delta / game / curtime / frame_count
   config  plan switching
   json    encode / decode
+  utils   encoding + hashing + date/time + script-scoped KV storage
+  mem     low-level DMA read/write + pattern scan + scatter batches
+  offsets dumper-synchronized named offset table
+
+Globals:
+  _SCRIPT_PATH / print / Delay / shared
 
 Notifications live under gui.notify (4 levels, colon-call):
   gui.notify:info / :success / :warn / :error (text, dur?)

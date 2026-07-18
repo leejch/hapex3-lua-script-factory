@@ -157,6 +157,8 @@ references/
 
 These files should be loaded only when needed.
 
+The reference pack was rebuilt from the [official HOOZi 3.0 Lua documentation](https://docs.hoozi.cc/products/apex/dev/) and verified on 2026-07-18. `api-reference.md` consolidates the global runtime surface, all 9 core modules, and all 8 utility modules. The official site remains authoritative if it conflicts with a local file.
+
 | Task                                                                  | Read                                                |
 | --------------------------------------------------------------------- | --------------------------------------------------- |
 | Check API parameters, return values, fields, or module behavior       | `references/api-reference.md`                       |
