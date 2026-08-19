@@ -1,4 +1,4 @@
--- 验证单独的直接 yaw 红线，并覆盖身体中心、队友/自身过滤。
+-- 验证正式红线逻辑，并覆盖身体中心、队友/自身过滤和备用投影路径。
 
 local event_handlers = {}
 local esp_callbacks = {}
