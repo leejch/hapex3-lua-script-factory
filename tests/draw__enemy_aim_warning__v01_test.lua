@@ -5,6 +5,10 @@ local esp_callbacks = {}
 local draw_lines = {}
 local logs = {}
 
+local function assert_near(actual, expected)
+    assert(math.abs(actual - expected) < 1e-6)
+end
+
 event = {
     on = function(name, handler)
         event_handlers[name] = handler
@@ -75,6 +79,7 @@ game = {
     localplayer = {
         index = 1,
         camera_origin = { x = 0, y = 0, z = 0 },
+        view_angle = { pitch = 0, yaw = 0 },
     },
     entities = {
         players = {
@@ -179,5 +184,37 @@ callback({
 assert(#draw_lines == 3)
 assert(draw_lines[3].x2 == 1000 and draw_lines[3].y2 == 636)
 assert(draw_lines[3].color.r == 255 and draw_lines[3].color.g == 0 and draw_lines[3].color.b == 0)
+
+-- 屏幕外正后方敌人：frame_update 仍应绘制到屏幕底边。
+game.entities.players[2] = {
+    index = 8,
+    origin = { x = -10, y = 0, z = 0 },
+    yaw = 0,
+    in_screen = false,
+    can_draw = true,
+}
+event_handlers.frame_update()
+assert(#draw_lines == 4)
+assert(draw_lines[4].x1 == 960 and draw_lines[4].y1 == 540)
+assert_near(draw_lines[4].x2, 960)
+assert_near(draw_lines[4].y2, 1080)
+assert(draw_lines[4].color.r == 255 and draw_lines[4].color.g == 0 and draw_lines[4].color.b == 0)
+assert(draw_lines[4].thickness == 2.0)
+
+-- 屏幕外右侧敌人：frame_update 应将方向线裁剪到屏幕右边。
+game.entities.players[2] = {
+    index = 9,
+    origin = { x = 0, y = 10, z = 0 },
+    yaw = -90,
+    in_screen = false,
+    can_draw = true,
+}
+event_handlers.frame_update()
+assert(#draw_lines == 5)
+assert(draw_lines[5].x1 == 960 and draw_lines[5].y1 == 540)
+assert_near(draw_lines[5].x2, 1920)
+assert_near(draw_lines[5].y2, 540)
+assert(draw_lines[5].color.r == 255 and draw_lines[5].color.g == 0 and draw_lines[5].color.b == 0)
+assert(draw_lines[5].thickness == 2.0)
 
 print("draw__enemy_aim_warning__v01_test: ok")

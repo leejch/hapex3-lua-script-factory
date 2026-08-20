@@ -1,6 +1,6 @@
 -- 判断敌人的水平 yaw 是否在 5 度内指向当前玩家，并绘制一条 2px 红线。
 -- 使用 game.localplayer、game.entities.players、math.CalcAngle、math.WorldToScreen、esp.add 和 draw.*。
--- 线段从屏幕中心绘制到敌人身体中心；优先读取 ESP 屏幕框，失败时使用头脚投影中点。
+-- 屏幕内终点优先读取 ESP 屏幕框，失败时使用头脚投影中点；屏幕外终点裁剪到对应屏幕边界。
 -- 只保留正式运行逻辑，不包含候选算法、诊断探针或临时测试绘制。
 
 local AIM_CONE_DEGREES = 5.0
@@ -11,6 +11,10 @@ local local_position = {
     x = nil,
     y = nil,
     z = nil,
+}
+local local_view_angle = {
+    pitch = nil,
+    yaw = nil,
 }
 local local_index = -1
 
@@ -52,6 +56,18 @@ local function read_vec3(value)
     return x, y, z
 end
 
+local function read_view_angle(player)
+    local angle = read_member(player, "view_angle")
+    if angle == nil then return nil end
+
+    local pitch = read_member(angle, "pitch")
+    local yaw = read_member(angle, "yaw")
+    if not is_number(pitch) then pitch = read_member(angle, "x") end
+    if not is_number(yaw) then yaw = read_member(angle, "y") end
+    if not (is_number(pitch) and is_number(yaw)) then return nil end
+    return pitch, yaw
+end
+
 local function read_player_position(player)
     local camera_origin = read_member(player, "camera_origin")
     local x, y, z = read_vec3(camera_origin)
@@ -71,6 +87,8 @@ local function get_local_position()
     local_position.x = nil
     local_position.y = nil
     local_position.z = nil
+    local_view_angle.pitch = nil
+    local_view_angle.yaw = nil
     local_index = -1
 
     local player = game.localplayer
@@ -82,6 +100,10 @@ local function get_local_position()
     local_position.x = x
     local_position.y = y
     local_position.z = z
+
+    local pitch, yaw = read_view_angle(player)
+    local_view_angle.pitch = pitch
+    local_view_angle.yaw = yaw
 
     local index = read_member(player, "index")
     local_index = is_number(index) and index or -1
@@ -137,6 +159,48 @@ local function draw_screen_line(enemy_x, enemy_y)
     return true
 end
 
+local function get_offscreen_endpoint(ox, oy, oz)
+    if not (is_number(local_view_angle.pitch) and is_number(local_view_angle.yaw)) then
+        return nil
+    end
+
+    local target_pitch, target_yaw = math.CalcAngle(
+        math.Vec3(local_position.x, local_position.y, local_position.z),
+        math.Vec3(ox, oy, oz)
+    )
+    if not (is_number(target_pitch) and is_number(target_yaw)) then return nil end
+
+    local yaw_error = math.AngleNormalize(target_yaw - local_view_angle.yaw)
+    local pitch_error = target_pitch - local_view_angle.pitch
+    if not (is_number(yaw_error) and is_number(pitch_error)) then return nil end
+
+    -- 用相对水平角决定左右/后方方向。正后方的方向向量为 (0, 1)，即屏幕底边。
+    local yaw_radians = math.rad(yaw_error)
+    local pitch_radians = math.rad(pitch_error)
+    local direction_x = math.sin(yaw_radians)
+    local direction_y = math.sin(pitch_radians) + math.max(0.0, -math.cos(yaw_radians))
+    if math.abs(direction_x) <= 1e-8 and math.abs(direction_y) <= 1e-8 then
+        direction_y = 1.0
+    end
+
+    local screen_width, screen_height = draw.screen()
+    if not (is_number(screen_width) and is_number(screen_height)) then return nil end
+
+    local half_width = screen_width * 0.5
+    local half_height = screen_height * 0.5
+    local scale = math.huge
+    if math.abs(direction_x) > 1e-8 then
+        scale = math.min(scale, half_width / math.abs(direction_x))
+    end
+    if math.abs(direction_y) > 1e-8 then
+        scale = math.min(scale, half_height / math.abs(direction_y))
+    end
+    if scale == math.huge then return nil end
+
+    return half_width + direction_x * scale,
+        half_height + direction_y * scale
+end
+
 local function draw_box_center_line(ctx)
     local min_x, min_y, max_x, max_y = read_screen_box(ctx)
     if min_x == nil then return false end
@@ -190,9 +254,32 @@ local function draw_enemy_center_line(ctx, enemy, ox, oy, oz)
     return draw_projected_body_center(enemy, ox, oy, oz)
 end
 
+local function draw_offscreen_aim_line(ox, oy, oz)
+    local screen_x, screen_y = get_offscreen_endpoint(ox, oy, oz)
+    if not (is_number(screen_x) and is_number(screen_y)) then return false end
+    return draw_screen_line(screen_x, screen_y)
+end
+
 event.on("frame_update", function()
     -- 每帧复制坐标标量，避免跨 game.* 快照持有 Vec3 引用。
-    get_local_position()
+    if not get_local_position() then return end
+
+    -- ESP 回调在实体离开视野后可能不再触发；直接遍历实体表，保证屏幕外提示仍每帧刷新。
+    local entities = game.entities
+    local players = entities and entities.players
+    if players == nil then return end
+
+    for _, enemy in pairs(players) do
+        if read_member(enemy, "index") ~= local_index
+            and not read_member(enemy, "is_teammate")
+            and not read_member(enemy, "is_dead")
+            and read_member(enemy, "in_screen") ~= true then
+            local ox, oy, oz = read_player_position(enemy)
+            if ox ~= nil and is_being_aimed_at(enemy, ox, oy, oz) then
+                draw_offscreen_aim_line(ox, oy, oz)
+            end
+        end
+    end
 end)
 
 local enemy_aim_warning = esp.add("enemy_aim_warning", function(enemy, ctx)
