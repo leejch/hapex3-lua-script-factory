@@ -1,21 +1,23 @@
--- 判断敌人的水平 yaw 是否在 5 度内指向当前玩家，并绘制一条 2px 红线。
+-- 判断敌人的水平 yaw 是否在 5 度内指向当前玩家，并绘制一条 2px 亮粉色线。
 -- 使用 game.localplayer、game.entities.players、math.CalcAngle、math.WorldToScreen、esp.add 和 draw.*。
--- 屏幕内终点优先读取 ESP 屏幕框，失败时使用头脚投影中点；屏幕外终点裁剪到对应屏幕边界。
+-- 屏幕内保持身体中心亮粉色线；屏幕外改为在指定位置显示一行文字告警。
 -- 只保留正式运行逻辑，不包含候选算法、诊断探针或临时测试绘制。
 
 local AIM_CONE_DEGREES = 5.0
 local AIM_WARNING_DELAY_SECONDS = 0.8
+local OFFSCREEN_WARNING_X_RATIO = 0.35
+local OFFSCREEN_WARNING_Y_RATIO = 0.3
+local OFFSCREEN_WARNING_LINE_HEIGHT = 22.0
+local OFFSCREEN_WARNING_TEXT_SCALE = 1.2
 local LINE_THICKNESS = 2.0
-local FINAL_RED = draw.u8(255, 0, 0, 255)
+local BRIGHT_PINK = draw.u8(255, 0, 255, 255)
+local LIGHT_YELLOW = draw.u8(255, 255, 153, 255)
+local BLACK_OUTLINE = draw.u8(0, 0, 0, 255)
 
 local local_position = {
     x = nil,
     y = nil,
     z = nil,
-}
-local local_view_angle = {
-    pitch = nil,
-    yaw = nil,
 }
 local local_index = -1
 local aim_started_at = {}
@@ -56,18 +58,6 @@ local function read_vec3(value)
     local z = read_member(value, "z")
     if not (is_number(x) and is_number(y) and is_number(z)) then return nil end
     return x, y, z
-end
-
-local function read_view_angle(player)
-    local angle = read_member(player, "view_angle")
-    if angle == nil then return nil end
-
-    local pitch = read_member(angle, "pitch")
-    local yaw = read_member(angle, "yaw")
-    if not is_number(pitch) then pitch = read_member(angle, "x") end
-    if not is_number(yaw) then yaw = read_member(angle, "y") end
-    if not (is_number(pitch) and is_number(yaw)) then return nil end
-    return pitch, yaw
 end
 
 local function read_player_position(player)
@@ -115,8 +105,6 @@ local function get_local_position()
     local_position.x = nil
     local_position.y = nil
     local_position.z = nil
-    local_view_angle.pitch = nil
-    local_view_angle.yaw = nil
     local_index = -1
 
     local player = game.localplayer
@@ -128,10 +116,6 @@ local function get_local_position()
     local_position.x = x
     local_position.y = y
     local_position.z = z
-
-    local pitch, yaw = read_view_angle(player)
-    local_view_angle.pitch = pitch
-    local_view_angle.yaw = yaw
 
     local index = read_member(player, "index")
     local_index = is_number(index) and index or -1
@@ -181,52 +165,10 @@ local function draw_screen_line(enemy_x, enemy_y)
         screen_height * 0.5,
         enemy_x,
         enemy_y,
-        FINAL_RED,
+        BRIGHT_PINK,
         { thickness = LINE_THICKNESS }
     )
     return true
-end
-
-local function get_offscreen_endpoint(ox, oy, oz)
-    if not (is_number(local_view_angle.pitch) and is_number(local_view_angle.yaw)) then
-        return nil
-    end
-
-    local target_pitch, target_yaw = math.CalcAngle(
-        math.Vec3(local_position.x, local_position.y, local_position.z),
-        math.Vec3(ox, oy, oz)
-    )
-    if not (is_number(target_pitch) and is_number(target_yaw)) then return nil end
-
-    local yaw_error = math.AngleNormalize(target_yaw - local_view_angle.yaw)
-    local pitch_error = target_pitch - local_view_angle.pitch
-    if not (is_number(yaw_error) and is_number(pitch_error)) then return nil end
-
-    -- 用相对水平角决定左右/后方方向。正后方的方向向量为 (0, 1)，即屏幕底边。
-    local yaw_radians = math.rad(yaw_error)
-    local pitch_radians = math.rad(pitch_error)
-    local direction_x = math.sin(yaw_radians)
-    local direction_y = math.sin(pitch_radians) + math.max(0.0, -math.cos(yaw_radians))
-    if math.abs(direction_x) <= 1e-8 and math.abs(direction_y) <= 1e-8 then
-        direction_y = 1.0
-    end
-
-    local screen_width, screen_height = draw.screen()
-    if not (is_number(screen_width) and is_number(screen_height)) then return nil end
-
-    local half_width = screen_width * 0.5
-    local half_height = screen_height * 0.5
-    local scale = math.huge
-    if math.abs(direction_x) > 1e-8 then
-        scale = math.min(scale, half_width / math.abs(direction_x))
-    end
-    if math.abs(direction_y) > 1e-8 then
-        scale = math.min(scale, half_height / math.abs(direction_y))
-    end
-    if scale == math.huge then return nil end
-
-    return half_width + direction_x * scale,
-        half_height + direction_y * scale
 end
 
 local function draw_box_center_line(ctx)
@@ -282,10 +224,61 @@ local function draw_enemy_center_line(ctx, enemy, ox, oy, oz)
     return draw_projected_body_center(enemy, ox, oy, oz)
 end
 
-local function draw_offscreen_aim_line(ox, oy, oz)
-    local screen_x, screen_y = get_offscreen_endpoint(ox, oy, oz)
-    if not (is_number(screen_x) and is_number(screen_y)) then return false end
-    return draw_screen_line(screen_x, screen_y)
+local function format_warning_value(value)
+    if value == nil then return "[]" end
+
+    local text = tostring(value)
+    if text == "" then return "[]" end
+    return text
+end
+
+local offscreen_warning_text_size = nil
+
+local function get_offscreen_warning_text_size()
+    if is_number(offscreen_warning_text_size) then
+        return offscreen_warning_text_size
+    end
+
+    local success, _, default_height = pcall(function()
+        return draw.measure("Ag")
+    end)
+    if not success or not is_number(default_height) or default_height <= 0 then
+        return nil
+    end
+
+    offscreen_warning_text_size = default_height * OFFSCREEN_WARNING_TEXT_SCALE
+    return offscreen_warning_text_size
+end
+
+local function draw_offscreen_warning_text(enemy, row)
+    local screen_width, screen_height = draw.screen()
+    if not (is_number(screen_width) and is_number(screen_height)) then return false end
+
+    local team = read_member(enemy, "team_num")
+    if team == nil then team = read_member(enemy, "squad_id") end
+    local message = string.format(
+        "你已被瞄准！队伍: %s，玩家: %s，等级: %s，击杀: %s",
+        format_warning_value(team),
+        format_warning_value(read_member(enemy, "name")),
+        format_warning_value(read_member(enemy, "grade")),
+        format_warning_value(read_member(enemy, "kills"))
+    )
+
+    local text_options = { outline = BLACK_OUTLINE }
+    local text_size = get_offscreen_warning_text_size()
+    if text_size ~= nil then
+        text_options.size = text_size
+    end
+
+    draw.text(
+        screen_width * OFFSCREEN_WARNING_X_RATIO,
+        screen_height * OFFSCREEN_WARNING_Y_RATIO
+            + (row - 1) * OFFSCREEN_WARNING_LINE_HEIGHT,
+        LIGHT_YELLOW,
+        message,
+        text_options
+    )
+    return true
 end
 
 event.on("frame_update", function()
@@ -297,6 +290,7 @@ event.on("frame_update", function()
     local players = entities and entities.players
     if players == nil then return end
 
+    local offscreen_warning_row = 0
     for _, enemy in pairs(players) do
         local index = read_member(enemy, "index")
         if index == local_index
@@ -307,7 +301,8 @@ event.on("frame_update", function()
             local ox, oy, oz = read_player_position(enemy)
             local is_aimed = ox ~= nil and is_being_aimed_at(enemy, ox, oy, oz)
             if warning_delay_elapsed(enemy, is_aimed) then
-                draw_offscreen_aim_line(ox, oy, oz)
+                offscreen_warning_row = offscreen_warning_row + 1
+                draw_offscreen_warning_text(enemy, offscreen_warning_row)
             end
         end
     end
@@ -342,4 +337,4 @@ if enemy_aim_warning ~= nil then
     enemy_aim_warning.enableds = { true, true, true, true }
 end
 
-log.success("敌人瞄准红线（全范围版）已注册")
+log.success("敌人瞄准亮粉色提示（全范围版）已注册")

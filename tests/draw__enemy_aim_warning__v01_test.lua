@@ -1,14 +1,11 @@
--- 验证全范围版本的 800ms 持续瞄准延迟、立即隐藏、屏内中心线和屏外边缘线。
+-- 验证全范围版本的 800ms 持续瞄准延迟、立即隐藏、亮粉色屏内线和屏外文字告警样式。
 
 local current_time = 0.0
 local event_handlers = {}
 local esp_callbacks = {}
 local draw_lines = {}
+local draw_texts = {}
 local logs = {}
-
-local function assert_near(actual, expected)
-    assert(math.abs(actual - expected) < 1e-6)
-end
 
 event = {
     on = function(name, handler)
@@ -29,6 +26,9 @@ draw = {
     screen = function()
         return 1920, 1080
     end,
+    measure = function()
+        return 100, 10
+    end,
     line = function(x1, y1, x2, y2, color, opts)
         draw_lines[#draw_lines + 1] = {
             x1 = x1,
@@ -37,6 +37,15 @@ draw = {
             y2 = y2,
             color = color,
             thickness = opts.thickness,
+        }
+    end,
+    text = function(x, y, color, value, opts)
+        draw_texts[#draw_texts + 1] = {
+            x = x,
+            y = y,
+            color = color,
+            text = value,
+            opts = opts,
         }
     end,
 }
@@ -129,7 +138,7 @@ local function visible_aim_callback(index, yaw)
     }, { box = box })
 end
 
--- 持续瞄准未达到 800ms 时不绘制，达到后绘制身体中心红线。
+-- 持续瞄准未达到 800ms 时不绘制，达到后绘制身体中心亮粉色线。
 visible_aim_callback(2, -90)
 assert(#draw_lines == 0)
 current_time = 0.79
@@ -140,7 +149,7 @@ visible_aim_callback(2, -90)
 assert(#draw_lines == 1)
 assert(draw_lines[1].x1 == 960 and draw_lines[1].y1 == 540)
 assert(draw_lines[1].x2 == 950 and draw_lines[1].y2 == 500)
-assert(draw_lines[1].color.r == 255 and draw_lines[1].color.g == 0 and draw_lines[1].color.b == 0)
+assert(draw_lines[1].color.r == 255 and draw_lines[1].color.g == 0 and draw_lines[1].color.b == 255)
 assert(draw_lines[1].thickness == 2.0)
 
 -- 一旦不再瞄准，当前帧立即停止绘制；重新瞄准需要重新累计 800ms。
@@ -167,52 +176,67 @@ callback({
 }, { box = box })
 assert(#draw_lines == 2)
 
--- 屏外正后方敌人通过 frame_update 处理，延迟后指向屏幕底边。
+-- 屏外正后方敌人通过 frame_update 处理，延迟后显示指定位置的文字告警。
 game.entities.players[2] = {
     index = 8,
     origin = { x = -10, y = 0, z = 0 },
     yaw = 0,
     in_screen = false,
     can_draw = true,
+    team_num = 7,
+    name = "EnemyRear",
+    grade = 42,
+    kills = 3,
 }
 current_time = 2.0
 event_handlers.frame_update()
 assert(#draw_lines == 2)
+assert(#draw_texts == 0)
 current_time = 2.81
 event_handlers.frame_update()
-assert(#draw_lines == 3)
-assert(draw_lines[3].x1 == 960 and draw_lines[3].y1 == 540)
-assert_near(draw_lines[3].x2, 960)
-assert_near(draw_lines[3].y2, 1080)
+assert(#draw_lines == 2)
+assert(#draw_texts == 1)
+assert(draw_texts[1].x == 768 and draw_texts[1].y == 324)
+assert(draw_texts[1].color.r == 255 and draw_texts[1].color.g == 255 and draw_texts[1].color.b == 153)
+assert(draw_texts[1].opts.size == 12.0)
+assert(draw_texts[1].opts.outline.r == 0 and draw_texts[1].opts.outline.g == 0 and draw_texts[1].opts.outline.b == 0)
+assert(draw_texts[1].text == "你已被瞄准！队伍: 7，玩家: EnemyRear，等级: 42，击杀: 3")
 
 -- 屏外敌人停止瞄准后立即隐藏，重新瞄准不会继承旧计时。
 game.entities.players[2].yaw = 90
 current_time = 2.82
 event_handlers.frame_update()
-assert(#draw_lines == 3)
+assert(#draw_lines == 2)
+assert(#draw_texts == 1)
 game.entities.players[2].yaw = 0
 current_time = 2.83
 event_handlers.frame_update()
-assert(#draw_lines == 3)
+assert(#draw_lines == 2)
+assert(#draw_texts == 1)
 current_time = 3.64
 event_handlers.frame_update()
-assert(#draw_lines == 4)
+assert(#draw_lines == 2)
+assert(#draw_texts == 2)
 
--- 屏外右侧敌人最终指向屏幕右边。
+-- 屏外右侧敌人也使用文字告警，不再绘制屏外亮粉色线。
 game.entities.players[2] = {
     index = 9,
     origin = { x = 0, y = 10, z = 0 },
     yaw = -90,
     in_screen = false,
     can_draw = true,
+    team_num = 8,
+    name = "EnemyRight",
+    grade = 43,
+    kills = 4,
 }
 current_time = 4.0
 event_handlers.frame_update()
 current_time = 4.81
 event_handlers.frame_update()
-assert(#draw_lines == 5)
-assert(draw_lines[5].x1 == 960 and draw_lines[5].y1 == 540)
-assert_near(draw_lines[5].x2, 1920)
-assert_near(draw_lines[5].y2, 540)
+assert(#draw_lines == 2)
+assert(#draw_texts == 3)
+assert(draw_texts[3].x == 768 and draw_texts[3].y == 324)
+assert(draw_texts[3].text == "你已被瞄准！队伍: 8，玩家: EnemyRight，等级: 43，击杀: 4")
 
 print("draw__enemy_aim_warning__v01_test: ok")
