@@ -1,4 +1,4 @@
--- 仅判断视野内敌人的水平 yaw 是否在 5 度内指向当前玩家，并绘制一条 2px 亮粉色线。
+-- 仅判断视野内敌人的水平 yaw 是否在 5 度内指向当前玩家，并绘制一条 2px 红线。
 -- 使用 game.localplayer、game.entities.players、math.CalcAngle、math.WorldToScreen、esp.add 和 draw.*。
 -- 线段从屏幕中心绘制到敌人身体中心；持续瞄准达到延迟后才显示，停止瞄准立即隐藏。
 -- 这是屏内成品版本，不包含屏幕外方向提示、候选算法或临时测试绘制。
@@ -6,7 +6,7 @@
 local AIM_CONE_DEGREES = 5.0
 local AIM_WARNING_DELAY_SECONDS = 0.8
 local LINE_THICKNESS = 2.0
-local BRIGHT_PINK = draw.u8(255, 0, 255, 255)
+local FINAL_RED = draw.u8(255, 0, 0, 255)
 
 local local_position = {
     x = nil,
@@ -159,7 +159,7 @@ local function draw_screen_line(enemy_x, enemy_y)
         screen_height * 0.5,
         enemy_x,
         enemy_y,
-        BRIGHT_PINK,
+        FINAL_RED,
         { thickness = LINE_THICKNESS }
     )
     return true
@@ -264,4 +264,4 @@ if enemy_aim_warning_screen_only ~= nil then
     enemy_aim_warning_screen_only.enableds = { true, true, true, true }
 end
 
-log.success("敌人瞄准亮粉色提示（屏内版）已注册")
+log.success("敌人瞄准红线（屏内版）已注册")

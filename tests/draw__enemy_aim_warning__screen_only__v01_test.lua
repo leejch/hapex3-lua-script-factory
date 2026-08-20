@@ -1,4 +1,4 @@
--- 验证屏内版本的 800ms 持续瞄准延迟、立即隐藏、亮粉色线和屏外过滤。
+-- 验证屏内版本的 800ms 持续瞄准延迟、立即隐藏和屏外过滤。
 
 local current_time = 0.0
 local event_handlers = {}
@@ -120,7 +120,7 @@ local function visible_aim_callback(index, yaw)
     }, { box = box })
 end
 
--- 800ms 内不显示，超过延迟后显示屏内身体中心亮粉色线。
+-- 800ms 内不显示，超过延迟后显示屏内身体中心红线。
 visible_aim_callback(2, -90)
 assert(#draw_lines == 0)
 current_time = 0.81
@@ -128,7 +128,7 @@ visible_aim_callback(2, -90)
 assert(#draw_lines == 1)
 assert(draw_lines[1].x1 == 960 and draw_lines[1].y1 == 540)
 assert(draw_lines[1].x2 == 950 and draw_lines[1].y2 == 500)
-assert(draw_lines[1].color.r == 255 and draw_lines[1].color.g == 0 and draw_lines[1].color.b == 255)
+assert(draw_lines[1].color.r == 255 and draw_lines[1].color.g == 0 and draw_lines[1].color.b == 0)
 assert(draw_lines[1].thickness == 2.0)
 
 -- 停止瞄准立即隐藏，重新瞄准重新计时。
