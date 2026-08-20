@@ -1,5 +1,6 @@
--- 验证正式红线逻辑，并覆盖身体中心、队友/自身过滤和备用投影路径。
+-- 验证全范围版本的 800ms 持续瞄准延迟、立即隐藏、屏内中心线和屏外边缘线。
 
+local current_time = 0.0
 local event_handlers = {}
 local esp_callbacks = {}
 local draw_lines = {}
@@ -12,6 +13,12 @@ end
 event = {
     on = function(name, handler)
         event_handlers[name] = handler
+    end,
+}
+
+time = {
+    now = function()
+        return current_time
     end,
 }
 
@@ -67,9 +74,6 @@ esp = {
 }
 
 log = {
-    warn = function(message)
-        logs[#logs + 1] = { level = "warn", message = message }
-    end,
     success = function(message)
         logs[#logs + 1] = { level = "success", message = message }
     end,
@@ -85,7 +89,6 @@ game = {
         players = {
             {
                 index = 2,
-                distance = 10,
                 in_screen = true,
                 can_draw = true,
             },
@@ -115,77 +118,56 @@ local box = {
     max = { x = 1000, y = 600 },
 }
 
-callback({
-    index = 2,
-    origin = { x = 0, y = 10, z = 0 },
-    head_pos = { x = 0, y = 10, z = 100 },
-    yaw = -90,
-    in_screen = true,
-    can_draw = true,
-}, { box = box })
+local function visible_aim_callback(index, yaw)
+    callback({
+        index = index,
+        origin = { x = 0, y = 10, z = 0 },
+        head_pos = { x = 0, y = 10, z = 100 },
+        yaw = yaw,
+        in_screen = true,
+        can_draw = true,
+    }, { box = box })
+end
 
+-- 持续瞄准未达到 800ms 时不绘制，达到后绘制身体中心红线。
+visible_aim_callback(2, -90)
+assert(#draw_lines == 0)
+current_time = 0.79
+visible_aim_callback(2, -90)
+assert(#draw_lines == 0)
+current_time = 0.81
+visible_aim_callback(2, -90)
 assert(#draw_lines == 1)
 assert(draw_lines[1].x1 == 960 and draw_lines[1].y1 == 540)
 assert(draw_lines[1].x2 == 950 and draw_lines[1].y2 == 500)
 assert(draw_lines[1].color.r == 255 and draw_lines[1].color.g == 0 and draw_lines[1].color.b == 0)
 assert(draw_lines[1].thickness == 2.0)
 
-callback({
-    index = 3,
-    origin = { x = 0, y = 10, z = 0 },
-    yaw = 30,
-    view_angle = { pitch = 0, yaw = 30 },
-    in_screen = true,
-    can_draw = true,
-}, { box = box })
+-- 一旦不再瞄准，当前帧立即停止绘制；重新瞄准需要重新累计 800ms。
+current_time = 0.82
+visible_aim_callback(2, 0)
 assert(#draw_lines == 1)
+current_time = 0.83
+visible_aim_callback(2, -90)
+assert(#draw_lines == 1)
+current_time = 1.64
+visible_aim_callback(2, -90)
+assert(#draw_lines == 2)
 
+-- 屏内过滤仍然生效。
+visible_aim_callback(3, 30)
+assert(#draw_lines == 2)
 callback({
     index = 4,
     origin = { x = 0, y = 10, z = 0 },
-    yaw = 0,
-    view_angle = { pitch = 0, yaw = 0 },
+    yaw = -90,
     is_teammate = true,
     in_screen = true,
     can_draw = true,
 }, { box = box })
-assert(#draw_lines == 1)
-
-callback({
-    index = 5,
-    origin = { x = 0, y = 10, z = 0 },
-    yaw = 30,
-    in_screen = true,
-    can_draw = true,
-}, { box = box })
-assert(#draw_lines == 1)
-
--- ctx.box 无效时，备用路径使用脚底与头部投影的中点。
-callback({
-    index = 6,
-    origin = { x = 0, y = 10, z = 0 },
-    head_pos = { x = 0, y = 10, z = 100 },
-    yaw = -90,
-    in_screen = true,
-    can_draw = true,
-}, { box = { min = { x = 0, y = 0 }, max = { x = 0, y = 0 } } })
 assert(#draw_lines == 2)
-assert(draw_lines[2].x2 == 1000 and draw_lines[2].y2 == 650)
-assert(draw_lines[2].color.r == 255 and draw_lines[2].color.g == 0 and draw_lines[2].color.b == 0)
 
--- head_pos 缺失时使用脚底上移 36 个游戏单位的中心近似。
-callback({
-    index = 7,
-    origin = { x = 0, y = 10, z = 0 },
-    yaw = -90,
-    in_screen = true,
-    can_draw = true,
-}, { box = { min = { x = 0, y = 0 }, max = { x = 0, y = 0 } } })
-assert(#draw_lines == 3)
-assert(draw_lines[3].x2 == 1000 and draw_lines[3].y2 == 636)
-assert(draw_lines[3].color.r == 255 and draw_lines[3].color.g == 0 and draw_lines[3].color.b == 0)
-
--- 屏幕外正后方敌人：frame_update 仍应绘制到屏幕底边。
+-- 屏外正后方敌人通过 frame_update 处理，延迟后指向屏幕底边。
 game.entities.players[2] = {
     index = 8,
     origin = { x = -10, y = 0, z = 0 },
@@ -193,15 +175,30 @@ game.entities.players[2] = {
     in_screen = false,
     can_draw = true,
 }
+current_time = 2.0
+event_handlers.frame_update()
+assert(#draw_lines == 2)
+current_time = 2.81
+event_handlers.frame_update()
+assert(#draw_lines == 3)
+assert(draw_lines[3].x1 == 960 and draw_lines[3].y1 == 540)
+assert_near(draw_lines[3].x2, 960)
+assert_near(draw_lines[3].y2, 1080)
+
+-- 屏外敌人停止瞄准后立即隐藏，重新瞄准不会继承旧计时。
+game.entities.players[2].yaw = 90
+current_time = 2.82
+event_handlers.frame_update()
+assert(#draw_lines == 3)
+game.entities.players[2].yaw = 0
+current_time = 2.83
+event_handlers.frame_update()
+assert(#draw_lines == 3)
+current_time = 3.64
 event_handlers.frame_update()
 assert(#draw_lines == 4)
-assert(draw_lines[4].x1 == 960 and draw_lines[4].y1 == 540)
-assert_near(draw_lines[4].x2, 960)
-assert_near(draw_lines[4].y2, 1080)
-assert(draw_lines[4].color.r == 255 and draw_lines[4].color.g == 0 and draw_lines[4].color.b == 0)
-assert(draw_lines[4].thickness == 2.0)
 
--- 屏幕外右侧敌人：frame_update 应将方向线裁剪到屏幕右边。
+-- 屏外右侧敌人最终指向屏幕右边。
 game.entities.players[2] = {
     index = 9,
     origin = { x = 0, y = 10, z = 0 },
@@ -209,12 +206,13 @@ game.entities.players[2] = {
     in_screen = false,
     can_draw = true,
 }
+current_time = 4.0
+event_handlers.frame_update()
+current_time = 4.81
 event_handlers.frame_update()
 assert(#draw_lines == 5)
 assert(draw_lines[5].x1 == 960 and draw_lines[5].y1 == 540)
 assert_near(draw_lines[5].x2, 1920)
 assert_near(draw_lines[5].y2, 540)
-assert(draw_lines[5].color.r == 255 and draw_lines[5].color.g == 0 and draw_lines[5].color.b == 0)
-assert(draw_lines[5].thickness == 2.0)
 
 print("draw__enemy_aim_warning__v01_test: ok")

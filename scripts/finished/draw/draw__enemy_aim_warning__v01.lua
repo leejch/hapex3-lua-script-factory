@@ -4,6 +4,7 @@
 -- 只保留正式运行逻辑，不包含候选算法、诊断探针或临时测试绘制。
 
 local AIM_CONE_DEGREES = 5.0
+local AIM_WARNING_DELAY_SECONDS = 0.8
 local LINE_THICKNESS = 2.0
 local FINAL_RED = draw.u8(255, 0, 0, 255)
 
@@ -17,6 +18,7 @@ local local_view_angle = {
     yaw = nil,
 }
 local local_index = -1
+local aim_started_at = {}
 
 local function is_number(value)
     return type(value) == "number" and value == value and value > -1e6 and value < 1e6
@@ -81,6 +83,32 @@ local function angle_close(first, second)
 
     local error = math.AngleNormalize(first - second)
     return is_number(error) and math.abs(error) <= AIM_CONE_DEGREES
+end
+
+local function clear_aim_streak(enemy)
+    local index = read_member(enemy, "index")
+    if is_number(index) then aim_started_at[index] = nil end
+end
+
+local function warning_delay_elapsed(enemy, is_aimed)
+    local index = read_member(enemy, "index")
+    if not is_number(index) then return false end
+
+    if not is_aimed then
+        aim_started_at[index] = nil
+        return false
+    end
+
+    local now = time.now()
+    if not is_number(now) then return false end
+
+    local started_at = aim_started_at[index]
+    if started_at == nil then
+        aim_started_at[index] = now
+        return AIM_WARNING_DELAY_SECONDS <= 0.0
+    end
+
+    return now - started_at >= AIM_WARNING_DELAY_SECONDS
 end
 
 local function get_local_position()
@@ -270,12 +298,15 @@ event.on("frame_update", function()
     if players == nil then return end
 
     for _, enemy in pairs(players) do
-        if read_member(enemy, "index") ~= local_index
-            and not read_member(enemy, "is_teammate")
-            and not read_member(enemy, "is_dead")
-            and read_member(enemy, "in_screen") ~= true then
+        local index = read_member(enemy, "index")
+        if index == local_index
+            or read_member(enemy, "is_teammate")
+            or read_member(enemy, "is_dead") then
+            clear_aim_streak(enemy)
+        elseif read_member(enemy, "in_screen") ~= true then
             local ox, oy, oz = read_player_position(enemy)
-            if ox ~= nil and is_being_aimed_at(enemy, ox, oy, oz) then
+            local is_aimed = ox ~= nil and is_being_aimed_at(enemy, ox, oy, oz)
+            if warning_delay_elapsed(enemy, is_aimed) then
                 draw_offscreen_aim_line(ox, oy, oz)
             end
         end
@@ -285,13 +316,19 @@ end)
 local enemy_aim_warning = esp.add("enemy_aim_warning", function(enemy, ctx)
     if local_position.x == nil then return nil end
     if read_member(enemy, "index") == local_index then return nil end
-    if read_member(enemy, "is_teammate") then return nil end
-    if read_member(enemy, "is_dead") then return nil end
+    if read_member(enemy, "is_teammate") or read_member(enemy, "is_dead") then
+        clear_aim_streak(enemy)
+        return nil
+    end
     if read_member(enemy, "in_screen") ~= true then return nil end
-    if read_member(enemy, "can_draw") == false then return nil end
+    if read_member(enemy, "can_draw") == false then
+        clear_aim_streak(enemy)
+        return nil
+    end
 
     local ox, oy, oz = read_player_position(enemy)
-    if ox == nil or not is_being_aimed_at(enemy, ox, oy, oz) then return nil end
+    local is_aimed = ox ~= nil and is_being_aimed_at(enemy, ox, oy, oz)
+    if not warning_delay_elapsed(enemy, is_aimed) then return nil end
 
     draw_enemy_center_line(ctx, enemy, ox, oy, oz)
     return nil
@@ -305,4 +342,4 @@ if enemy_aim_warning ~= nil then
     enemy_aim_warning.enableds = { true, true, true, true }
 end
 
-log.success("敌人瞄准红线已注册")
+log.success("敌人瞄准红线（全范围版）已注册")
