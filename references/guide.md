@@ -1,8 +1,8 @@
 # Getting Started
 
-> Rebuilt from the [official HOOZi Getting Started page](https://docs.hoozi.cc/en/products/apex/dev/guide) and verified against the official [`hapex-lua` MCP endpoint](https://docs.hoozi.cc/mcp) on 2026-07-18. The official documentation is authoritative if the two differ.
+> Refreshed from the [official HOOZi Getting Started page](https://docs.hoozi.cc/en/products/apex/dev/guide) and checked against the official [`hapex-lua` MCP endpoint](https://docs.hoozi.cc/mcp) on 2026-08-27. The official documentation is authoritative if the two differ.
 
-Read this when you write your first script — from project layout to common pitfalls. Exact signatures and fields for all 17 modules are in [`api-reference.md`](api-reference.md).
+Read this when you write your first script — from project layout to common pitfalls. Exact signatures and fields for all 17 user-facing modules plus `globals` are in [`api-reference.md`](api-reference.md).
 
 ------------------------------------------------------------------------
 
@@ -176,7 +176,7 @@ Implications:
 
 | Function | Meaning | Use for |
 |----|----|----|
-| `time.now()` | Monotonic real-time seconds (equivalent to `os.clock()`) | Intervals, timers, throttling; not a Unix timestamp |
+| `time.now()` | Real-time seconds (equivalent to `os.clock()`) | Intervals, timers, throttling; use `utils.unix_time()` for Unix timestamps |
 | `time.delta()` | Last frame duration (seconds) | Speed integration (movement, animation lerp) |
 | `time.game()` | Local-player in-game time | Local game-time logic; pauses when the game pauses |
 | `time.curtime()` | Server-authoritative game time, or `0` when unavailable | Ring countdowns, bullet time, and server tick synchronization |
@@ -274,6 +274,16 @@ The API does not expose `input.is_down(VK_F1)` / `GetAsyncKeyState` style "is th
 
 To react to a menu hotkey the user pressed, bind a `KeybindControl` and use `input.format` to show its state.
 
+### External input device output
+
+The current `input` module can send relative mouse and keyboard output through KMBOX Net, KMBOX B+, or MAKCU. Check `input.device_connected()` and `input.backend()` before using it: no device and unsupported backend actions return `false` without an exception.
+
+`input.move` and `input.move_curve` are relative only; `move_curve` blocks the device for its duration and should not run in a frame loop. `button`, `click`, `wheel`, keyboard output, and `mask` have backend-specific capabilities. MAKCU has no keyboard channel, and keyboard masks only work when the physical keyboard is connected to the box. Held buttons, keys, and masks are released or cleared automatically on unload.
+
+### Player lifecycle events
+
+Use the edge-triggered `player_knocked`, `player_revived`, `player_died`, and `player_respawned` events when polling would add unnecessary per-frame work. Lifecycle callbacks expose `player_index`, `name`, `team_num`, `is_local`, and `is_teammate`, while all events also expose `timestamp` and `source`. A player first seen by the renderer does not emit a synthetic lifecycle event.
+
 ### `draw.*` must be called every frame
 
 The foreground draw list resets every frame:
@@ -323,6 +333,10 @@ local v = gui.get("aimbot.master")  -- returns true immediately, no need to wait
 
 `gui.get` / `Window:get_open` and other menu-thread read paths go through "current frame latest value" — visible same-frame. Background reader threads always go through the snapshot published at frame end.
 
+### InputText hint versus placeholder
+
+Since 2026-07-29, `InputText:set_hint(text)` controls the `[ ? ]` tooltip like other controls. `InputText:set_placeholder(text)` controls grey text inside an empty input box. Update older input-box `set_hint` calls to `set_placeholder` when preserving their previous appearance.
+
 ### No `net.http:get_sync`
 
 The API does not provide synchronous HTTP — it would block the menu thread and freeze the GUI during script load. Correct pattern:
@@ -362,6 +376,14 @@ for _ in pairs(game.entities.loots) do n = n + 1 end
 ```
 
 `game.entities.{players, loots, projectiles}` are userdata-backed tables; `#` returns 0 or undefined. `pairs` works correctly.
+
+### Entity update cadence and `smart_filter`
+
+The `game` fields are snapshots with per-field update strategies. Off-screen, distant, or dead entities may be down-throttled, and fields marked on-screen-only retain their last value while unavailable. The local player is not throttled, and the currently locked aimbot target is exempt.
+
+For a custom skeleton, check `p:has_fresh_bones()` before drawing `p:bone(...)`; bones are on-screen only. Calling `bone()` or `has_fresh_bones()` requests all 17 bones for on-screen players for about 0.5 seconds.
+
+`game:smart_filter()` is lazy diagnostic data. It may return `nil` on the first call or outside a match; each call renews a one-second lease. Its icon fields are preloaded resource names for `file.image:get(...)`, not paths for `file.image:load()`, and an item must be checked before it is drawn.
 
 ### Keep low-level memory work explicit and batched
 

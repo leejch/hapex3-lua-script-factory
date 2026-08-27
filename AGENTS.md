@@ -11,7 +11,7 @@ Claude Code users should instead read `SKILL.md` in this same directory — it h
 
 The user is writing, editing, or debugging Lua scripts for HApex3.0 / HOOZi.
 
-Scripts live in `<app dir>/scripts/<name>.lua` and use 17 user-facing modules plus the global runtime surface.
+Scripts live in `<app dir>/scripts/<name>.lua` and use 17 user-facing modules plus the global runtime surface. The official MCP lists these as 18 module records when `globals` is included.
 
 Generic HApex3.0 product questions (not about Lua scripting) — this context does not apply.
 
@@ -56,6 +56,23 @@ HApex3.0 runs on a separate machine from the player. OS key APIs read the progra
 - `game.localplayer.*` fields (`is_zooming`, `is_grenade`, `is_down`, ...) — read from game memory
 - `input.is_active(menu_path)` — check menu hotkey active state
 
+### External input devices are capability-dependent
+
+The current `input` API can send relative mouse and keyboard output through KMBOX Net, KMBOX B+, or MAKCU:
+
+- Check `input.device_connected()` and `input.backend()` first. Without a usable device, these calls are no-ops returning `false`; an unsupported action can also return `false`.
+- `input.move` and `input.move_curve` are relative movement only. `move_curve` blocks the device for its duration, so never put it in a per-frame loop.
+- `input.button`, `input.click`, `input.wheel`, `input.key_down/up/press`, and `input.mask` have backend-specific support. MAKCU has no keyboard channel; keyboard masking also requires the physical keyboard to be connected to the box.
+- Held buttons, keys, and masks are automatically released or cleared on script unload. Do not leave device state unmanaged across callbacks.
+
+### Entity snapshots have an update cadence
+
+`game.entities` fields are not all refreshed every frame. Follow each field's `Update strategy`: off-screen, distant, or dead entities can be down-throttled, and on-screen-only fields retain their last value while unavailable. The local player is always relevant, and the currently locked aimbot target is exempt from entity throttling.
+
+For custom skeleton drawing, check `p:has_fresh_bones()` before using `p:bone(...)`. Bones are on-screen only; calling `bone()` or `has_fresh_bones()` requests all 17 bones for on-screen players for roughly 0.5 seconds.
+
+`game:smart_filter()` is on-demand diagnostics: it can return `nil` on the first call or outside a match, each call renews a one-second lease, and selected-but-unchecked items still must not be drawn. Its icon fields are resource names for `file.image:get(...)`, not file paths.
+
 ### Iterating game entities — use `pairs`, not `#`
 
 ```lua
@@ -91,6 +108,10 @@ local v = gui.get("aimbot.master")  -- already true, no frame wait
 ```
 
 Menu-thread reads return the current frame value. Background threads still see the previously published snapshot.
+
+### InputText hints and placeholders are separate
+
+Since the 2026-07-29 behavior change, `InputText:set_hint(text)` creates the standard `[ ? ]` tooltip, while `InputText:set_placeholder(text)` sets grey text inside an empty input box. When maintaining older scripts, replace an input-box `set_hint` call with `set_placeholder` if that was the intended behavior.
 
 ### Weapon config paths
 
@@ -162,7 +183,7 @@ For specifics beyond these conventions, the references next to this file contain
 
 Load on demand — each is large. For an API question like "what does `esp.add` accept?", read just `api-reference.md`. For "how do I write a damage logger?", read `examples.md`.
 
-The local references were rebuilt from [the official HOOZi 3.0 Lua documentation](https://docs.hoozi.cc/products/apex/dev/) and re-verified through the official `hapex-lua` MCP server on 2026-07-18.
+The local references were refreshed from [the official HOOZi 3.0 Lua documentation](https://docs.hoozi.cc/products/apex/dev/) through the official `hapex-lua` MCP server on 2026-08-27. The API snapshot contains all 17 user-facing modules plus `globals`; the live MCP remains authoritative.
 
 ## Module summary
 
@@ -172,11 +193,11 @@ Core 9:
   gui     menu UI + config writes
   esp     ESP elements (text / bar / mixed / free)
   net     async HTTP + WebSocket client/server
-  game    real-time read-only data
+  game    real-time read-only data, update cadence, smart_filter
   draw    primitive drawing (line/rect/circle/triangle/quad/polyline/text/image)
   math    vectors + projection + easing curves
   file    sandboxed file IO + static/animated image resources
-  input   hotkey state + formatter + clipboard
+  input   hotkey state + formatter + clipboard + device output
 
 Utility 8:
   log     console diagnostics (info/success/warn/error)
