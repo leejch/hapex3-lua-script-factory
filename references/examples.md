@@ -1,6 +1,6 @@
 # Example scripts
 
-> Rebuilt from the [official HOOZi Example scripts page](https://docs.hoozi.cc/en/products/apex/dev/examples) and verified against the official [`hapex-lua` MCP endpoint](https://docs.hoozi.cc/mcp) on 2026-07-18. The official documentation is authoritative if the two differ.
+> Refreshed from the [official HOOZi Example scripts page](https://docs.hoozi.cc/en/products/apex/dev/examples) and checked against the official [`hapex-lua` MCP endpoint](https://docs.hoozi.cc/mcp) on 2026-08-27. The official documentation is authoritative if the two differ.
 
 Eight scripts ship with the product; full source lives in the `scripts/` directory next to the application. Each script's top 5 comment lines document its dependencies and load behavior.
 

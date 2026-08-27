@@ -170,7 +170,7 @@ references/
 
 These files should be loaded only when needed.
 
-The reference pack was rebuilt from the [official HOOZi 3.0 Lua documentation](https://docs.hoozi.cc/products/apex/dev/) and re-verified through the official [`hapex-lua` MCP endpoint](https://docs.hoozi.cc/mcp) on 2026-07-18. `api-reference.md` consolidates the global runtime surface, all 9 core modules, and all 8 utility modules. The current MCP/official site remains authoritative if it conflicts with a local file.
+The reference pack was refreshed from the [official HOOZi 3.0 Lua documentation](https://docs.hoozi.cc/products/apex/dev/) through the official [`hapex-lua` MCP endpoint](https://docs.hoozi.cc/mcp) on 2026-08-27. `api-reference.md` consolidates the global runtime surface, all 9 core modules, and all 8 utility modules, including the current game snapshot cadence, `game:smart_filter()`, and external input-device output APIs. The current MCP/official site remains authoritative if it conflicts with a local file.
 
 | Task                                                                  | Read                                                |
 | --------------------------------------------------------------------- | --------------------------------------------------- |

@@ -170,7 +170,7 @@ references/
 
 这些文件应只在需要时读取。
 
-本参考包已根据 [HOOZi 3.0 Lua 官方开发文档](https://docs.hoozi.cc/products/apex/dev/) 重新构建，并于 2026-07-18 通过官方 [`hapex-lua` MCP 端点](https://docs.hoozi.cc/mcp) 重新核验。`api-reference.md` 汇总了全局运行时、9 个核心模块和 8 个工具模块；若本地文件与实时 MCP / 官网冲突，以后者为准。
+本参考包已根据 [HOOZi 3.0 Lua 官方开发文档](https://docs.hoozi.cc/products/apex/dev/) 刷新，并于 2026-08-27 通过官方 [`hapex-lua` MCP 端点](https://docs.hoozi.cc/mcp) 核验。`api-reference.md` 汇总了全局运行时、9 个核心模块和 8 个工具模块，并包含当前的 game 快照读取节奏、`game:smart_filter()` 与外部输入设备输出 API；若本地文件与实时 MCP / 官网冲突，以后者为准。
 
 | 任务                      | 应读取                              |
 | ----------------------- | -------------------------------- |
