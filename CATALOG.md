@@ -2,7 +2,8 @@
 
 | Asset | Category | Path | Status | Notes |
 | --- | --- | --- | --- | --- |
-| spectator-switch | config | `scripts/finished/config/config__spectator_switch__v02.lua` | stable | Production version using the local platform UID with self_base/index fallbacks, decoding runtime `spec_index` handles, and switching exact 0/1/2/3+ spectator ranges without drawing a diagnostic ESP; mock regression test included. |
+| spectator-switch-team-aware | config | `scripts/finished/config/config__spectator_switch__v03.lua` | stable | Counts teammate and enemy spectators separately; teammate ranges take exclusive priority whenever at least one teammate is watching, otherwise enemy ranges select the plan. Uses UID/self_base/index identity fallbacks and decoded `spec_index` handles; mock regression test included. |
+| spectator-switch | config | `scripts/finished/config/config__spectator_switch__v02.lua` | stable | Previous production version using the local platform UID with self_base/index fallbacks, decoding runtime `spec_index` handles, and switching exact 0/1/2/3+ total-spectator ranges without drawing a diagnostic ESP; retained alongside v03. |
 | spectator-switch-debug | config | `scripts/finished/config/config__spectator_switch__v01.lua` | experimental | Diagnostic version with the earlier editable range table and centered free-ESP output showing raw/decoded `spec_index` values and switch state; mock regression test included. |
 | web-radar | net | `scripts/finished/net/web_radar.lua` | stable | User-provided production script imported byte-for-byte unchanged; protocol and lifecycle behavior covered by a mocked regression test. |
 | low-level-blacklist | game | `scripts/finished/game/game__low_level_blacklist__v01.lua` | experimental | Applies team-aware grade 500/1000 rules after fail-closed local UID/team identity filtering, with UID range filtering, 4-space JSON, delayed reads, and transactional backups. |
