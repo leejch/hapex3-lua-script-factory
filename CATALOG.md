@@ -2,6 +2,7 @@
 
 | Asset | Category | Path | Status | Notes |
 | --- | --- | --- | --- | --- |
+| crosshair-distance-switch | config | `scripts/finished/config/config__crosshair_distance_switch__v01.lua` | experimental | Selects the on-screen, alive, non-knocked enemy with the smallest 3D angle from the camera view to the entity origin, then switches at 50/100/200 meters. Keeps the current plan without a target and checks plan availability before switching; mock regression test included. |
 | spectator-switch | config | `scripts/finished/config/config__spectator_switch__v02.lua` | stable | Production version using the local platform UID with self_base/index fallbacks, decoding runtime `spec_index` handles, and switching exact 0/1/2/3+ spectator ranges without drawing a diagnostic ESP; mock regression test included. |
 | spectator-switch-debug | config | `scripts/finished/config/config__spectator_switch__v01.lua` | experimental | Diagnostic version with the earlier editable range table and centered free-ESP output showing raw/decoded `spec_index` values and switch state; mock regression test included. |
 | web-radar | net | `scripts/finished/net/web_radar.lua` | stable | User-provided production script imported byte-for-byte unchanged; protocol and lifecycle behavior covered by a mocked regression test. |
