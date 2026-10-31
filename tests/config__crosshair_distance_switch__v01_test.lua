@@ -11,6 +11,7 @@ local function enemy(distance, yaw, pitch)
     local pitch_rad = math.rad(pitch or 0)
     return {
         index = 2,
+        name = "测试玩家",
         distance = distance,
         in_screen = true,
         is_teammate = false,
@@ -26,7 +27,14 @@ end
 
 local function scenario(players, options)
     options = options or {}
-    local state = { current = "manual", switches = {}, warnings = {}, frame = 0 }
+    local state = { current = "manual", switches = {}, warnings = {}, frame = 0, draw_texts = {} }
+    draw = {
+        screen = function() return options.width or 1920, options.height or 1080 end,
+        rgba = function() return 0xFFFFFFFF end,
+        text = function(x, y, color, text, opts)
+            state.draw_texts[#state.draw_texts + 1] = { x = x, y = y, text = text, opts = opts }
+        end,
+    }
     game = {
         localplayer = {
             index = 1, is_dead = false, is_down = false,
@@ -70,6 +78,7 @@ local function scenario(players, options)
     state.step = function(count)
         for _ = 1, count or 1 do
             state.frame = state.frame + 1
+            state.draw_texts = {}
             callback({})
         end
     end
@@ -169,5 +178,26 @@ assert(s.current == ALL_PLANS[4])
 s.current = "manual"
 s.step()
 assert(s.current == ALL_PLANS[4] and #s.switches == 4)
+
+-- 两行文字必须来自同一选中目标，每帧按当前分辨率定位，无目标时不残留。
+local near = enemy(20, 20)
+near.name = "近处玩家"
+local centered = enemy(150, 1)
+centered.name = "中心玩家"
+s = scenario({ near, centered })
+s.step()
+assert(#s.draw_texts == 2)
+assert(s.draw_texts[1].text == "150 m" and s.draw_texts[2].text == "中心玩家")
+assert(s.draw_texts[1].x == 1632 and s.draw_texts[1].y == 270)
+assert(s.draw_texts[2].x == 1632 and s.draw_texts[2].y == 294)
+s.step()
+assert(#s.draw_texts == 2 and #s.switches == 1)
+game.entities.players = {}
+s.step()
+assert(#s.draw_texts == 0)
+s = scenario({ centered }, { width = 2560, height = 1440, plans = {} })
+s.step()
+assert(s.draw_texts[1].x == 2176 and s.draw_texts[1].y == 360)
+assert(s.draw_texts[2].text == "中心玩家" and #s.switches == 0)
 
 print("config__crosshair_distance_switch__v01 tests passed")

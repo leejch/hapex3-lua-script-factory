@@ -1,7 +1,7 @@
 -- 按屏幕内与视线夹角最小的敌人距离，自动切换四档参数方案。
--- 使用 game 玩家快照、math.CalcAngle、event 帧更新及 config 方案接口。
+-- 使用 game 玩家快照、math.CalcAngle、event 帧更新、draw 文字及 config 方案接口。
 -- 距离区间为 [0,50)、[50,100)、[100,200)、[200,+∞)，单位为米。
--- 无有效敌人或本人死亡、倒地时保持当前方案，不绘制额外画面。
+-- 在屏幕宽度 85%、高度 25% 处显示目标距离与名称，无有效目标时隐藏并保持方案。
 -- 四个方案均须启用本脚本，避免方案切换时被运行时自动卸载。
 
 local DISTANCE_PLAN_RULES = {
@@ -44,6 +44,7 @@ local function find_target_distance()
     local view_yaw = math.rad(lp.view_angle.y)
     local best_cosine = -math.huge
     local best_distance = nil
+    local best_name = nil
     local players = game.entities.players
     for _, player in pairs(players) do
         if player.in_screen and not player.is_teammate
@@ -69,12 +70,23 @@ local function find_target_distance()
                     then
                         best_cosine = cosine
                         best_distance = player.distance
+                        best_name = player.name
                     end
                 end
             end
         end
     end
-    return best_distance
+    return best_distance, best_name
+end
+
+local function draw_target_info(distance, name)
+    local width, height = draw.screen()
+    local x, y = width * 0.85, height * 0.25
+    local options = { size = 20, outline = true }
+    local color = draw.rgba(1, 1, 1, 1)
+    draw.text(x, y, color, string.format("%.0f m", distance), options)
+    draw.text(x, y + 24, color,
+        type(name) == "string" and name ~= "" and name or "未知玩家", options)
 end
 
 local function find_plan(distance)
@@ -129,8 +141,10 @@ local function switch_to_plan(plan, distance)
 end
 
 event.on("frame_update", function()
-    local distance = find_target_distance()
+    local distance, name = find_target_distance()
     if distance ~= nil then
+        -- 每帧重绘，且先于可能卸载本脚本的方案切换，避免使用跨帧实体引用。
+        draw_target_info(distance, name)
         switch_to_plan(find_plan(distance), distance)
     end
 end)
