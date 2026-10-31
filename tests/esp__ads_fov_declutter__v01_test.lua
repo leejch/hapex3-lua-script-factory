@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 验证 ADS 视野锥内外的名称、段位、等级显示逻辑。
 -- 验证独立开关、异常数据保护和不受 ADS 影响的自定义骨骼绘制。
 -- 使用最小 HApex3.0 mock，不访问真实游戏、菜单或渲染设备。

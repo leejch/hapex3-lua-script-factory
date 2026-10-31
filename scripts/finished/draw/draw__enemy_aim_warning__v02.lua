@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 判断敌人的水平 yaw 是否在 5 度内指向当前玩家，并绘制一条 2px 亮粉色线。
 -- 使用 game.localplayer、game.entities.players、math.CalcAngle、math.WorldToScreen、esp.add 和 draw.*。
 -- 屏幕内保持身体中心亮粉色线；屏幕外改为在指定位置显示一行文字告警。

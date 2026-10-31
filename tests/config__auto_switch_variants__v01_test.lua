@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 模拟三个独立切参脚本，验证距离边界、倍率边界及全部二十八种组合。
 -- 覆盖收镜优先、旧武器数据、目标筛选、缺失配置和切换失败限频。
 -- 禁止访问 draw 与 esp，确保正式脚本没有残留调试绘制。

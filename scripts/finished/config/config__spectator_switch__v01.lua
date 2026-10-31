@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 按本人 UID 统计当前对局中正在观战本人的玩家数量，并自动切换 HApex3.0 参数方案。
 -- 观战人数区间由下方 SPECTATOR_PLAN_RULES 维护，min/max 都是闭区间，max=nil 表示无上限。
 -- 优先使用 UID，必要时使用 game.localplayer.self_base/index 兜底，再解码 players[].spec_index 句柄并调用 config.switch。

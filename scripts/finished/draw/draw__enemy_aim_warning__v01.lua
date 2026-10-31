@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 判断敌人的水平 yaw 是否在 5 度内指向当前玩家，并绘制一条 2px 红线。
 -- 使用 game.localplayer、game.entities.players、math.CalcAngle、math.WorldToScreen、esp.add 和 draw.*。
 -- 屏幕内终点优先读取 ESP 屏幕框，失败时使用头脚投影中点；屏幕外终点裁剪到对应屏幕边界。

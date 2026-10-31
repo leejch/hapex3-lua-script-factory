@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 验证开镜时通过 loots 菜单树关闭物资绘制与实体模型绘制。
 -- 验证人物 ESP、骨骼、小地图和屏外指示器不会被访问或修改。
 -- 验证退出开镜和脚本卸载时精确恢复已匹配开关的原始状态。

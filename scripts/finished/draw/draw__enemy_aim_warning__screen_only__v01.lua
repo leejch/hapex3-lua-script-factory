@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 仅判断视野内敌人的水平 yaw 是否在 5 度内指向当前玩家，并绘制一条 2px 红线。
 -- 使用 game.localplayer、game.entities.players、math.CalcAngle、math.WorldToScreen、esp.add 和 draw.*。
 -- 线段从屏幕中心绘制到敌人身体中心；持续瞄准达到延迟后才显示，停止瞄准立即隐藏。

@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 功能：模拟 HApex3.0 运行时并验证网页雷达成品脚本的核心契约。
 -- 范围：覆盖本机监听、广播节流、玩家与毒圈快照、ping/pong 和禁用关闭。
 -- 方法：使用最小 mock 注入脚本依赖，不访问真实游戏或网络服务。

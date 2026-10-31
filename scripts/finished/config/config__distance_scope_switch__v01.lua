@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 按准星角度最近敌人的距离与本人手持武器倍镜，自动切换二十八种方案。
 -- 使用 game 玩家快照、math.CalcAngle、开镜视野角、event 及 config 接口。
 -- 优先判断开镜状态，再确定距离档，最后在开镜时匹配倍镜档。

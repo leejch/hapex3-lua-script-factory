@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 验证全范围版本的 800ms 持续瞄准延迟、立即隐藏、屏内中心线和屏外边缘线。
 
 local current_time = 0.0

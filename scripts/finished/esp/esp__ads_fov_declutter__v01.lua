@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 功能：开镜时隐藏 ADS 视野锥内敌人的名称、段位和等级，并独立绘制骨骼线。
 -- 分类：esp
 -- 使用 API：gui、esp、game、math、event、draw、log。

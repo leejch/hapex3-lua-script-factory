@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 验证开镜时关闭物资、实体模型和人物菜单中的全部布尔绘制开关。
 -- 验证已注册的 ESP 人物信息在 INV、VIS、DWN、ALLY 四种场景下都会关闭。
 -- 验证无关视觉分支不受影响，退出开镜和脚本卸载时恢复原始状态。

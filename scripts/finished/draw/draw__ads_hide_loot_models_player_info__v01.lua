@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 开镜时临时关闭 HApex3.0 的物资、实体模型和人物信息绘制。
 -- 使用 game.localplayer.is_zooming 读取玩家侧开镜状态，适配双机环境。
 -- 人物菜单按 visual/ESP 分支递归匹配，已注册的 esp.elements 则关闭四种人物场景。

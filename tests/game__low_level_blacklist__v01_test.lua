@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 模拟 HApex3.0 运行时，验证按队伍等级规则自动加入 black 的核心行为。
 -- 覆盖本机 UID、team_num/squad_id、self_base 三重识别及身份未就绪时的封闭保护。
 -- 验证成功事务生成 before/after/add 文件且不会生成 remove.json。

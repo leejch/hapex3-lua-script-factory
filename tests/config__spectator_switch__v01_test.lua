@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 模拟 HApex3.0 运行时，验证按本人 UID 反向统计观战者并切换参数方案。
 -- 覆盖 0、1~2、3~4、5+ 四个区间，确认只统计解码后 spec_index 指向本人的实体。
 -- 额外验证 players 表不含本人、UID 不可用、UID 重复和参数方案切换失败时不会误切参。

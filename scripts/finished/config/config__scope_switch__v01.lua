@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 按本人手持武器的开镜视野角分档，自动切换七种倍镜参数方案。
 -- 使用 game.localplayer.is_zooming、target_zoom_fov、event 及 config 接口。
 -- 未开镜使用 config_1x；开镜按实测视野角下界匹配一至十倍档。

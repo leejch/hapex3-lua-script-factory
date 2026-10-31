@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 按屏幕内与准星视线夹角最小的敌人距离，自动切换四档参数方案。
 -- 使用 game 玩家快照、math.CalcAngle、event 帧更新及 config 方案接口。
 -- 距离区间为 [0,50)、[50,100)、[100,200)、[200,+∞)，单位为米。

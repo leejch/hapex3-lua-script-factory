@@ -1,3 +1,7 @@
+-- Copyright 2026 https://github.com/leejch/
+-- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+-- SPDX-License-Identifier: Apache-2.0
+
 -- 自动扫描 HApex3.0 当前对局，按队伍等级条件把玩家加入 black 名单。
 -- 使用本机 platform_uid 识别本人，并以本机 team_num/squad_id 排除真实本队。
 -- 仅处理指定 UID 范围；每次修改都保留操作前、操作后和新增记录备份。
