@@ -1,7 +1,7 @@
 -- 按屏幕内与视线夹角最小的敌人距离，自动切换四档参数方案。
 -- 使用 game 玩家快照、math.CalcAngle、event 帧更新、draw 文字及 config 方案接口。
 -- 距离区间为 [0,50)、[50,100)、[100,200)、[200,+∞)，单位为米。
--- 在屏幕宽度 85%、高度 25% 处显示目标距离与名称，无有效目标时隐藏并保持方案。
+-- 在屏幕宽度 85%、高度 25% 处显示目标及本人倍镜诊断，无有效目标时隐藏并保持方案。
 -- 四个方案均须启用本脚本，避免方案切换时被运行时自动卸载。
 
 local DISTANCE_PLAN_RULES = {
@@ -79,6 +79,56 @@ local function find_target_distance()
     return best_distance, best_name
 end
 
+local function diagnostic_value(value)
+    if value == nil or value == "" then
+        return "N/A"
+    end
+    if type(value) == "number" then
+        return is_finite(value) and string.format("%.2f", value) or "N/A"
+    end
+    return tostring(value)
+end
+
+local function scope_debug_lines()
+    local lp = game.localplayer
+    local lines = {
+        "ADS: " .. diagnostic_value(lp.is_zooming),
+        -- 这是开镜视野角原值，并非倍率；不使用未经实测的公式冒充实际倍数。
+        "target_zoom_fov: " .. diagnostic_value(lp.target_zoom_fov),
+        "weapon: " .. diagnostic_value(lp.weapon),
+        "weapon_enum: " .. diagnostic_value(lp.weapon_enum),
+        "weapon_fields_stale: " .. diagnostic_value(lp.weapon_fields_stale),
+    }
+
+    -- 两把主武器都显示，避免切枪瞬间或相同武器双持时错误认定当前槽位。
+    local weapons = lp.weapons
+    if type(weapons) ~= "table" or next(weapons) == nil then
+        lines[#lines + 1] = "weapons: N/A"
+        return lines
+    end
+    for _, weapon in ipairs(weapons) do
+        local prefix = "S" .. tostring(weapon.slot or "?") .. " "
+        lines[#lines + 1] = prefix .. "name: " .. diagnostic_value(weapon.name)
+        lines[#lines + 1] = prefix .. "enum: " .. diagnostic_value(weapon.weapon_enum)
+        lines[#lines + 1] = prefix .. "mods_read: " .. diagnostic_value(weapon.mods_read)
+        lines[#lines + 1] = prefix .. "mods_cached: " .. diagnostic_value(weapon.mods_cached)
+        local found_optic = false
+        for _, mod in ipairs(weapon.mods or {}) do
+            if mod.group == "optic" and mod.equipped == true then
+                found_optic = true
+                lines[#lines + 1] = prefix .. "optic.item: " .. diagnostic_value(mod.item)
+                lines[#lines + 1] = prefix .. "optic.label: " .. diagnostic_value(mod.item_name)
+                lines[#lines + 1] = prefix .. "optic.raw: " .. diagnostic_value(mod.name)
+            end
+        end
+        if not found_optic then
+            -- 配件未读到或使用缓存时，不能把没有匹配项直接解释为裸镜。
+            lines[#lines + 1] = prefix .. "optic: 无已装备记录"
+        end
+    end
+    return lines
+end
+
 local function draw_target_info(distance, name)
     local width, height = draw.screen()
     local x, y = width * 0.85, height * 0.25
@@ -87,6 +137,10 @@ local function draw_target_info(distance, name)
     draw.text(x, y, color, string.format("%.0f m", distance), options)
     draw.text(x, y + 24, color,
         type(name) == "string" and name ~= "" and name or "未知玩家", options)
+    local debug_options = { size = 14, outline = true }
+    for index, line in ipairs(scope_debug_lines()) do
+        draw.text(x, y + 48 + (index - 1) * 20, color, line, debug_options)
+    end
 end
 
 local function find_plan(distance)

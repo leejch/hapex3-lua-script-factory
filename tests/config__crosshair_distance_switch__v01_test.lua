@@ -186,12 +186,12 @@ local centered = enemy(150, 1)
 centered.name = "中心玩家"
 s = scenario({ near, centered })
 s.step()
-assert(#s.draw_texts == 2)
+assert(#s.draw_texts == 8)
 assert(s.draw_texts[1].text == "150 m" and s.draw_texts[2].text == "中心玩家")
 assert(s.draw_texts[1].x == 1632 and s.draw_texts[1].y == 270)
 assert(s.draw_texts[2].x == 1632 and s.draw_texts[2].y == 294)
 s.step()
-assert(#s.draw_texts == 2 and #s.switches == 1)
+assert(#s.draw_texts == 8 and #s.switches == 1)
 game.entities.players = {}
 s.step()
 assert(#s.draw_texts == 0)
@@ -199,5 +199,46 @@ s = scenario({ centered }, { width = 2560, height = 1440, plans = {} })
 s.step()
 assert(s.draw_texts[1].x == 2176 and s.draw_texts[1].y == 360)
 assert(s.draw_texts[2].text == "中心玩家" and #s.switches == 0)
+
+-- 倍镜诊断来自本人，区分已装备配件、可选配件及未读到的配件。
+s = scenario({ centered })
+s.lp.is_zooming = true
+s.lp.target_zoom_fov = 30
+s.lp.weapon = "R-301"
+s.lp.weapon_enum = 42
+s.lp.weapon_fields_stale = false
+s.lp.weapons = {
+    { slot = 1, name = "R-301", weapon_enum = 42, mods_read = true, mods_cached = false, mods = {
+        { group = "optic", equipped = true, item = "ranger_3x", item_name = "3倍镜", name = "optic_cq_hcog_ranger" },
+        { group = "optic", equipped = false, item = "unused", item_name = "未装备", name = "unused" },
+        { group = "weapon_mod", equipped = true, item = "mag", name = "mag" },
+    } },
+    { slot = 2, name = "Wingman", weapon_enum = 43, mods_read = false, mods_cached = true, mods = {} },
+}
+s.step()
+local function has_line(text)
+    for _, call in ipairs(s.draw_texts) do
+        if call.text == text then return true end
+    end
+    return false
+end
+assert(has_line("ADS: true"))
+assert(has_line("target_zoom_fov: 30.00"))
+assert(has_line("weapon_fields_stale: false"))
+assert(has_line("S1 optic.item: ranger_3x"))
+assert(has_line("S1 optic.label: 3倍镜"))
+assert(has_line("S1 optic.raw: optic_cq_hcog_ranger"))
+assert(not has_line("S1 optic.item: unused"))
+assert(has_line("S2 mods_read: false") and has_line("S2 mods_cached: true"))
+assert(has_line("S2 optic: 无已装备记录"))
+assert(s.draw_texts[3].y == 318)
+for index = 4, #s.draw_texts do
+    assert(s.draw_texts[index].y - s.draw_texts[index - 1].y == 20)
+end
+s.lp.target_zoom_fov = 15
+s.lp.weapons[1].mods[1].item = "sniper_6x"
+s.step()
+assert(has_line("target_zoom_fov: 15.00") and has_line("S1 optic.item: sniper_6x"))
+assert(#s.switches == 1)
 
 print("config__crosshair_distance_switch__v01 tests passed")
