@@ -542,3 +542,11 @@ This repository is not intended for:
 * unrelated generic Lua projects
 * using Git history as the only script archive
 * installing the original `hapex3-lua-skill.zip` package
+
+## License
+
+- Copyright 2026 https://github.com/leejch/
+- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+SPDX-License-Identifier: Apache-2.0
+
+To use this project, comply with the [Apache License 2.0](LICENSE). When distributing it or derivative works, include the license, retain applicable notices, and mark modified files.

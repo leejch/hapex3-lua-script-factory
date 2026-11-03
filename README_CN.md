@@ -542,3 +542,11 @@ Codex 云端不应依赖本地机器路径，例如：
 * 无关的通用 Lua 项目
 * 把 Git 历史作为唯一脚本归档
 * 安装原始 `hapex3-lua-skill.zip` 包
+
+## 许可证
+
+- Copyright 2026 https://github.com/leejch/
+- Project URL: https://github.com/leejch/hapex3-lua-script-factory/
+SPDX-License-Identifier: Apache-2.0
+
+使用本项目须遵守 [Apache License 2.0](LICENSE)。分发本项目或其衍生作品时，请附上许可证、保留适用的声明，并注明修改过的文件。
